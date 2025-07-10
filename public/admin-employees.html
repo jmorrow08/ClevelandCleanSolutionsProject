@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management - Admin Portal</title>
+    <link rel="stylesheet" href="css/admin-styles.css"> 
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <style>
+        /* Your existing page-specific styles */
+        .form-section h3, .list-section h3, #employee-rate-management-section h4 {
+            color: #34495e;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .table-wrapper {
+            overflow-x: auto; 
+        }
+        #employee-rate-management-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        #add-edit-employee-rate-form-section { 
+            background-color: #f8f9fa; 
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid #e9ecef;
+        }
+        /* --- NEW STYLES for User Role Management section --- */
+        #user-role-management-section h4 { /* Ensure heading style consistency */
+            color: #34495e;
+            border-bottom: 2px solid #e0e0e0; /* Match other h4 if desired */
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        #user-role-management-section {
+            margin-top: 30px;
+            padding-top:20px;
+            border-top: 2px dashed #007bff; /* Visually separate this section */
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>Cleveland Clean Solutions - Admin Portal</h1>
+            <nav>
+                <a href="admin.html">Dashboard</a>
+                <a href="admin-clients-locations.html">Clients & Locations</a>
+                <a href="admin-payroll.html">Payroll</a>
+                <a href="admin-service-history.html">Service History</a>
+                <a href="admin-employees.html" class="active">Employee Management</a>
+                <button id="admin-logout-button">Logout</button>
+            </nav>
+        </header>
+
+        <main id="admin-employees-content" class="admin-main-content">
+            <h2>Employee Management</h2>
+            <a href="admin.html" class="back-link">&larr; Back to Admin Dashboard</a>
+
+            <div id="employee-main-view">
+                <button id="show-add-employee-form-button" class="admin-action-button" style="margin-bottom: 20px;">Add New Employee</button>
+
+                <div id="employee-list-section" class="list-section">
+                    <h3>Employee List</h3>
+                    <p id="employee-loading-message">Loading employees...</p>
+                    <div class="table-wrapper">
+                        <table id="employee-table" class="data-table" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Job Title</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employee-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                    <p id="no-employees-message" class="empty-state-message" style="display: none;">No employees found.</p>
+                </div>
+            </div>
+
+            <div id="add-employee-form-section" class="form-section" style="display: none;">
+                <h3>Add New Employee</h3>
+                <form id="add-employee-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="add-employee-first-name">First Name:</label>
+                            <input type="text" id="add-employee-first-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add-employee-last-name">Last Name:</label>
+                            <input type="text" id="add-employee-last-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add-employee-id-string">Employee ID String:</label>
+                            <input type="text" id="add-employee-id-string" placeholder="e.g., EMP-1001" required>
+                            <small><i>Enter a unique ID for this employee.</i></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="add-employee-email">Email:</label>
+                            <input type="email" id="add-employee-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add-employee-phone">Phone:</label>
+                            <input type="tel" id="add-employee-phone">
+                        </div>
+                        <div class="form-group">
+                            <label for="add-employee-job-title">Job Title:</label>
+                            <input type="text" id="add-employee-job-title" placeholder="e.g., Cleaner, Supervisor">
+                        </div>
+                        <div class="form-group">
+                            <label for="add-employee-initial-password">Initial Password:</label>
+                            <input type="password" id="add-employee-initial-password" required minlength="6">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="save-button">Create Employee</button>
+                        <button type="button" id="cancel-add-employee-button" class="cancel-button">Cancel</button>
+                    </div>
+                    <div id="add-employee-message" class="form-message"></div>
+                </form>
+            </div>
+
+            <div id="edit-employee-form-section" class="form-section" style="display: none;">
+                <h3>Edit Employee Profile</h3>
+                <form id="edit-employee-form"> 
+                    <input type="hidden" id="edit-employee-uid"> 
+                    <input type="hidden" id="edit-employee-auth-uid"> 
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="edit-employee-first-name">First Name:</label>
+                            <input type="text" id="edit-employee-first-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-employee-last-name">Last Name:</label>
+                            <input type="text" id="edit-employee-last-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-employee-email">Email (Login):</label>
+                            <input type="email" id="edit-employee-email" required readonly>
+                            <small><i>(Email/Login cannot be changed here.)</i></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-employee-phone">Phone:</label>
+                            <input type="tel" id="edit-employee-phone">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-employee-job-title">Job Title:</label>
+                            <input type="text" id="edit-employee-job-title">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-employee-id-string">Employee ID String:</label>
+                            <input type="text" id="edit-employee-id-string" readonly>
+                            <small><i>(Custom ID, not editable.)</i></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-employee-system-id">System ID (Firestore):</label>
+                            <input type="text" id="edit-employee-system-id" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-employee-status">Status:</label>
+                            <select id="edit-employee-status" required>
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="save-button">Save Employee Changes</button>
+                        <button type="button" id="cancel-edit-employee-button" class="cancel-button">Cancel</button>
+                    </div>
+                    <div id="edit-employee-message" class="form-message"></div>
+                </form> 
+                <hr style="margin-top: 25px; margin-bottom: 15px;">
+                <h4>Set New Password for Employee</h4>
+                <div class="form-group" style="display: flex; align-items: center; gap: 5px;">
+                    <div style="flex-grow: 1;">
+                        <label for="set-employee-new-password-input" style="margin-bottom: 2px;">New Password:</label>
+                        <input type="password" id="set-employee-new-password-input" minlength="6" style="max-width: 400px;">
+                    </div>
+                    <button type="button" class="reveal-password-btn" data-target="set-employee-new-password-input" title="Show/Hide password" style="padding: 5px 8px; line-height: 1; height: 35px; margin-top: 20px;">👁️</button>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="set-employee-new-password-button" class="admin-action-button" style="background-color: #dc3545;">Set Employee Password</button>
+                    <small style="display: block; margin-top: 5px;"><i>This will immediately change the employee's login password.</i></small>
+                </div>
+                <div id="set-employee-password-message" class="form-message" style="margin-top: 10px;"></div>
+                
+                <div id="employee-rate-management-section">
+                    <h4>Manage Pay Rates for <span id="current-employee-name-for-rates">this Employee</span></h4>
+                    <button id="show-add-employee-rate-form-button" class="admin-action-button button-small" style="margin-bottom: 15px;">Add New Rate</button>
+                    <div id="add-edit-employee-rate-form-section" class="form-section" style="display: none; background-color: #f0f0f0; padding:15px; border-radius:5px;">
+                        <h5 id="employee-rate-form-title">Add New Rate</h5>
+                        <form id="add-edit-employee-rate-form">
+                            <input type="hidden" id="edit-employee-rate-doc-id">
+                            <div class="form-grid">
+                                <div class="form-group"><label for="employee-rate-location-select">Location:</label><select id="employee-rate-location-select" required><option value="">-- Loading Locations --</option></select></div>
+                                <div class="form-group"><label for="employee-rate-amount">Rate Amount ($ per hour):</label><input type="number" id="employee-rate-amount" required step="0.01" min="0" placeholder="e.g., 25.50"></div>
+                            </div>
+                            <div class="form-actions"><button type="submit" id="save-employee-rate-button" class="save-button">Save Rate</button><button type="button" id="cancel-add-edit-employee-rate-button" class="cancel-button">Cancel</button></div>
+                            <div id="add-edit-employee-rate-message" class="form-message"></div>
+                        </form>
+                    </div>
+                    <p id="employee-rates-loading-message" style="display: none;">Loading rates for this employee...</p>
+                    <div class="table-wrapper">
+                        <table id="employee-rates-table" class="data-table" style="display: none;">
+                            <thead><tr><th>Location</th><th>Rate ($/hr)</th><th>Actions</th></tr></thead>
+                            <tbody id="employee-rates-table-body"></tbody>
+                        </table>
+                    </div>
+                    <p id="no-employee-rates-message" class="empty-state-message" style="display: none;">No specific rates found.</p>
+                </div>
+
+                <div id="user-role-management-section" style="display: none;"> {/* Initially hidden; JS will show for super_admin */}
+                    <h4>Set/Update Admin Privileges for <span id="current-employee-name-for-role">this User</span></h4>
+                    <p><small><i>Use this section to grant or revoke admin access. This applies to the user associated with the Auth UID below.</i></small></p>
+                    <form id="set-user-role-form">
+                        <div class="form-group">
+                            <label for="role-mgmt-target-uid">User Auth UID (Read-only):</label>
+                            <input type="text" id="role-mgmt-target-uid" readonly style="background-color: #e9ecef;">
+                        </div>
+                        <div class="form-group">
+                            <label for="role-mgmt-role-select">Select New Role:</label>
+                            <select id="role-mgmt-role-select">
+                                <option value="employee">Employee (No Admin Privileges)</option>
+                                <option value="standard_admin">Standard Admin</option>
+                                <option value="super_admin">Super Admin</option>
+                                </select>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" id="set-user-role-button" class="admin-action-button save-button">Set User Role</button>
+                        </div>
+                    </form>
+                    <div id="set-user-role-message" class="form-message" style="margin-top: 10px;"></div>
+                </div>
+                </div> 
+        </main>
+
+        <footer class="admin-footer">
+            <p>&copy; <span id="current-year"></span> Cleveland Clean Solutions. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script src="../js/firebase-config.js"></script> 
+    <script src="js/admin-employees.js"></script>   
+    <script>
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        const adminLogoutButton = document.getElementById('admin-logout-button');
+        if (adminLogoutButton && typeof firebase !== 'undefined' && firebase.auth) {
+            adminLogoutButton.addEventListener('click', () => {
+                firebase.auth().signOut().then(() => {
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error('Logout Error (Employee Mgmt Page):', error);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

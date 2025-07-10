@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard</title>
+    <link rel="stylesheet" href="css/employee-portal-styles.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
+    <style>
+        /* Styles from employee_portal_html_v4_my_uploads, plus scrollbar for photo container */
+        #my-uploaded-photos-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            max-height: 450px; /* Or your desired height */
+            overflow-y: auto;
+            padding: 10px; 
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .my-photo-item {
+            border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px;
+            background-color: #f9f9f9; text-align: left; font-size: 0.85em;
+        }
+        .my-photo-item img {
+            width: 100%; height: 130px; object-fit: cover;
+            border-radius: 3px; margin-bottom: 8px; cursor: pointer;
+        }
+        .my-photo-item p { margin: 4px 0; word-wrap: break-word; }
+        .my-photo-item .photo-meta { color: #555; }
+        .my-photo-item .photo-notes { margin-top: 8px; font-style: italic; color: #333; white-space: pre-wrap; }
+        /* Make sure other styles from your employee-portal-styles.css are loaded */
+
+        /* Basic styling for the portal switch button if not in employee-portal-styles.css */
+        .portal-switch-button {
+            background-color: #007bff; 
+            color: white; 
+            padding: 8px 12px; 
+            text-decoration: none; 
+            border-radius: 4px; 
+            margin-left: 10px; /* Adjusted margin slightly */
+            display: inline-block; /* Ensures proper layout with other buttons */
+        }
+    </style>
+</head>
+<body>
+
+<div id="employee-dashboard-content" style="display: none;">
+    <div class="ccs-header-v4">
+        <h1 id="welcome-message" class="ccs-title-v4">Loading Employee Portal...</h1>
+        <div class="ccs-usermenu-v4">
+            <a href="../admin.html" id="go-to-admin-portal-link" class="portal-switch-button" style="display:none;">Switch to Admin View</a>
+            <button id="logout-button" class="ccs-button-v4 ccs-button-danger-v4">Logout</button>
+            </div>
+    </div>
+    <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 25px;">
+
+    <div class="form-group" style="margin-bottom: 25px;">
+        <label for="location-select-input">Select Current Location:</label>
+        <select id="location-select-input" required>
+            <option value="">-- Loading Locations --</option>
+        </select>
+        <small><i>Location required for Clock-In, Photo Uploads, and Job Notes.</i></small>
+    </div>
+
+    <div id="clock-section" class="ccs-card-v4">
+        <h3 class="ccs-card-title-v4">Time Clock</h3>
+        <p><strong>Status:</strong> <span id="clock-status">Loading...</span></p>
+        <div id="clock-buttons">
+            <button id="clock-in-button" class="ccs-button-v4" style="display: none;">Clock In</button>
+            <button id="clock-out-button" class="ccs-button-v4" style="display: none;">Clock Out</button>
+        </div>
+        <div id="clock-message" style="margin-top: 15px;"></div>
+    </div>
+
+    <div id="upload-section" class="ccs-card-v4">
+        <h3 class="ccs-card-title-v4">Upload Job Photo(s)</h3>
+        <div style="margin-bottom: 15px;">
+            <label for="camera-input" class="action-button" style="margin-bottom: 10px;">Take Photo</label>
+            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
+           
+            <label for="gallery-input" class="action-button" style="margin-bottom: 10px;">Select from Gallery</label>
+            <input type="file" id="gallery-input" accept="image/*" multiple style="display: none;">
+        </div>
+        <div id="selected-files-display" style="margin-bottom: 15px; font-style: italic;">
+            </div>
+        <div class="form-group">
+            <label for="photo-upload-notes">Notes for these Photo(s):</label>
+            <textarea id="photo-upload-notes" rows="3" placeholder="Optional: Add notes about these photos..."></textarea>
+        </div>
+        <button id="upload-button" class="ccs-button-v4">Upload Selected Photo(s)</button>
+        <div id="upload-progress" style="margin-top: 10px; height: 1.2em;"></div>
+        <div id="upload-message" style="margin-top: 10px;"></div>
+    </div>
+
+    <div id="my-uploads-section" class="ccs-card-v4">
+        <h3 class="ccs-card-title-v4">My Recent Uploads (Today)</h3> <p id="my-uploads-loading-message" class="ccs-loading-sub" style="display: none;">Loading your uploaded photos...</p>
+        <div id="my-uploaded-photos-container">
+            </div>
+        <p id="no-my-uploads-message" class="ccs-no-data-msg" style="display: none;">You have not uploaded any photos today.</p>
+    </div>
+
+    <div id="job-notes-section" class="ccs-card-v4">
+        <h3 class="ccs-card-title-v4">General Job Notes</h3>
+        <p><small><i>Use this section for general notes about the current service/location (e.g., supplies needed, access issues, client requests). These notes are linked to your current selected location and the time you save them.</i></small></p>
+        <div class="form-group">
+            <label for="general-job-notes-textarea">Your Notes:</label>
+            <textarea id="general-job-notes-textarea" rows="4" placeholder="Enter any general notes for this job/location..."></textarea>
+        </div>
+        <div class="form-actions" style="text-align: left;"> 
+            <button id="save-job-notes-button" class="ccs-button-v4 save-button">Save Job Notes</button>
+        </div>
+        <div id="job-notes-message" class="form-message" style="margin-top: 10px;"></div>
+    </div>
+
+    <div id="payroll-section" class="ccs-card-v4">
+        <h3 class="ccs-card-title-v4">Recent Payroll</h3>
+        <div id="payroll-list-container">
+            <p id="payroll-loading-message" class="ccs-loading-sub">Loading payroll...</p>
+            <div style="overflow-x: auto;">
+                <table id="payroll-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Pay Period</th>
+                            <th>Payment Date</th>
+                            <th>Net Pay</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payroll-table-body"></tbody>
+                </table>
+            </div>
+            <p id="no-payroll-message" class="ccs-no-data-msg" style="display: none;">No payroll records found.</p>
+        </div>
+    </div>
+
+    <div id="change-password-section" class="ccs-card-v4">
+        <h3 class="ccs-card-title-v4">Change Password</h3>
+        <form id="change-password-form">
+            <div class="form-group">
+                <label for="current-password">Current Password:</label>
+                <input type="password" id="current-password" required>
+            </div>
+            <div class="form-group">
+                <label for="new-password">New Password (min. 6 characters):</label>
+                <input type="password" id="new-password" required minlength="6">
+            </div>
+            <div class="form-group">
+                <label for="confirm-password">Confirm New Password:</label>
+                <input type="password" id="confirm-password" required minlength="6">
+            </div>
+            <div class="form-actions">
+                <button type="submit" id="update-password-button" class="save-button">Update Password</button>
+            </div>
+        </form>
+        <div id="password-message" class="form-message"></div>
+    </div>
+</div>
+
+<script src="../js/firebase-config.js"></script> 
+<script src="js/employee-portal.js"></script>
+
+</body>
+</html>

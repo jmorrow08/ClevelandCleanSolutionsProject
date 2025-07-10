@@ -1,0 +1,232 @@
+[2025-05-23T04:14:09.318Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[2025-05-23T04:14:09.320Z] > authorizing via signed-in user (walterringfield@clevelandcleansolutions.com)
+[2025-05-23T04:14:09.320Z] [iam] checking project cleveland-clean-portal for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[2025-05-23T04:14:09.321Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:09.321Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:09.322Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions [none]
+[2025-05-23T04:14:09.323Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:09.323Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[2025-05-23T04:14:09.617Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions 200
+[2025-05-23T04:14:09.617Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[2025-05-23T04:14:09.618Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:09.618Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:09.618Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/cleveland-clean-portal/serviceAccounts/cleveland-clean-portal@appspot.gserviceaccount.com:testIamPermissions [none]
+[2025-05-23T04:14:09.618Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/cleveland-clean-portal/serviceAccounts/cleveland-clean-portal@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[2025-05-23T04:14:10.050Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/cleveland-clean-portal/serviceAccounts/cleveland-clean-portal@appspot.gserviceaccount.com:testIamPermissions 200
+[2025-05-23T04:14:10.051Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/cleveland-clean-portal/serviceAccounts/cleveland-clean-portal@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+
+=== Deploying to 'cleveland-clean-portal'...
+
+i  deploying functions 
+Running command: npm --prefix "$RESOURCE_DIR" run lint
+
+> lint
+> eslint .
+
+
+/Users/ali/Desktop/ClevelandCleanSolutionsProject/functions/index.js
+   164:1  warning  This line has a length of 178. Maximum allowed is 120  max-len
+   185:1  warning  This line has a length of 147. Maximum allowed is 120  max-len
+   191:1  warning  This line has a length of 166. Maximum allowed is 120  max-len
+   194:1  warning  This line has a length of 129. Maximum allowed is 120  max-len
+   197:1  warning  This line has a length of 150. Maximum allowed is 120  max-len
+   209:1  warning  This line has a length of 185. Maximum allowed is 120  max-len
+   227:1  warning  This line has a length of 184. Maximum allowed is 120  max-len
+   251:1  warning  This line has a length of 157. Maximum allowed is 120  max-len
+   257:1  warning  This line has a length of 145. Maximum allowed is 120  max-len
+   293:1  warning  This line has a length of 154. Maximum allowed is 120  max-len
+   300:1  warning  This line has a length of 142. Maximum allowed is 120  max-len
+   303:1  warning  This line has a length of 125. Maximum allowed is 120  max-len
+   306:1  warning  This line has a length of 157. Maximum allowed is 120  max-len
+   308:1  warning  This line has a length of 135. Maximum allowed is 120  max-len
+   324:1  warning  This line has a length of 142. Maximum allowed is 120  max-len
+   327:1  warning  This line has a length of 146. Maximum allowed is 120  max-len
+   364:1  warning  This line has a length of 137. Maximum allowed is 120  max-len
+   377:1  warning  This line has a length of 129. Maximum allowed is 120  max-len
+   379:1  warning  This line has a length of 142. Maximum allowed is 120  max-len
+   383:1  warning  This line has a length of 170. Maximum allowed is 120  max-len
+   385:1  warning  This line has a length of 151. Maximum allowed is 120  max-len
+   390:1  warning  This line has a length of 122. Maximum allowed is 120  max-len
+   405:1  warning  This line has a length of 135. Maximum allowed is 120  max-len
+   442:1  warning  This line has a length of 135. Maximum allowed is 120  max-len
+   446:1  warning  This line has a length of 147. Maximum allowed is 120  max-len
+   478:1  warning  This line has a length of 129. Maximum allowed is 120  max-len
+   485:1  warning  This line has a length of 129. Maximum allowed is 120  max-len
+   502:1  warning  This line has a length of 128. Maximum allowed is 120  max-len
+   504:1  warning  This line has a length of 141. Maximum allowed is 120  max-len
+   512:1  warning  This line has a length of 155. Maximum allowed is 120  max-len
+   524:1  warning  This line has a length of 208. Maximum allowed is 120  max-len
+   529:1  warning  This line has a length of 136. Maximum allowed is 120  max-len
+   538:1  warning  This line has a length of 155. Maximum allowed is 120  max-len
+   568:1  warning  This line has a length of 151. Maximum allowed is 120  max-len
+   570:1  warning  This line has a length of 183. Maximum allowed is 120  max-len
+   574:1  warning  This line has a length of 167. Maximum allowed is 120  max-len
+   597:1  warning  This line has a length of 137. Maximum allowed is 120  max-len
+   598:1  warning  This line has a length of 139. Maximum allowed is 120  max-len
+   601:1  warning  This line has a length of 123. Maximum allowed is 120  max-len
+   605:1  warning  This line has a length of 166. Maximum allowed is 120  max-len
+   619:1  warning  This line has a length of 128. Maximum allowed is 120  max-len
+   633:1  warning  This line has a length of 155. Maximum allowed is 120  max-len
+   640:1  warning  This line has a length of 200. Maximum allowed is 120  max-len
+   643:1  warning  This line has a length of 238. Maximum allowed is 120  max-len
+   645:1  warning  This line has a length of 238. Maximum allowed is 120  max-len
+   649:1  warning  This line has a length of 131. Maximum allowed is 120  max-len
+   668:1  warning  This line has a length of 131. Maximum allowed is 120  max-len
+   674:1  warning  This line has a length of 129. Maximum allowed is 120  max-len
+   684:1  warning  This line has a length of 179. Maximum allowed is 120  max-len
+   696:1  warning  This line has a length of 125. Maximum allowed is 120  max-len
+   709:1  warning  This line has a length of 138. Maximum allowed is 120  max-len
+   716:1  warning  This line has a length of 125. Maximum allowed is 120  max-len
+   744:1  warning  This line has a length of 147. Maximum allowed is 120  max-len
+   761:1  warning  This line has a length of 133. Maximum allowed is 120  max-len
+   768:1  warning  This line has a length of 128. Maximum allowed is 120  max-len
+   769:1  warning  This line has a length of 123. Maximum allowed is 120  max-len
+   784:1  warning  This line has a length of 137. Maximum allowed is 120  max-len
+   796:1  warning  This line has a length of 156. Maximum allowed is 120  max-len
+   803:1  warning  This line has a length of 122. Maximum allowed is 120  max-len
+   805:1  warning  This line has a length of 131. Maximum allowed is 120  max-len
+   806:1  warning  This line has a length of 219. Maximum allowed is 120  max-len
+   808:1  warning  This line has a length of 124. Maximum allowed is 120  max-len
+   852:1  warning  This line has a length of 130. Maximum allowed is 120  max-len
+   863:1  warning  This line has a length of 121. Maximum allowed is 120  max-len
+   888:1  warning  This line has a length of 121. Maximum allowed is 120  max-len
+   890:1  warning  This line has a length of 121. Maximum allowed is 120  max-len
+   963:1  warning  This line has a length of 127. Maximum allowed is 120  max-len
+   968:1  warning  This line has a length of 142. Maximum allowed is 120  max-len
+  1042:1  warning  This line has a length of 157. Maximum allowed is 120  max-len
+  1055:1  warning  This line has a length of 127. Maximum allowed is 120  max-len
+
+✖ 70 problems (0 errors, 70 warnings)
+
+✔  functions: Finished running predeploy script. 
+[2025-05-23T04:14:11.524Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.524Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.524Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudresourcemanager.googleapis.com [none]
+[2025-05-23T04:14:11.524Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudresourcemanager.googleapis.com x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:11.806Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudresourcemanager.googleapis.com 200
+[2025-05-23T04:14:11.806Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudresourcemanager.googleapis.com [omitted]
+[2025-05-23T04:14:11.806Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.806Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.807Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal [none]
+[2025-05-23T04:14:11.923Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal 200
+[2025-05-23T04:14:11.924Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal {"projectNumber":"938625547862","projectId":"cleveland-clean-portal","lifecycleState":"ACTIVE","name":"Cleveland Clean Portal","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-03-09T08:06:51.743428Z","parent":{"type":"organization","id":"1085427166949"}}
+i  functions: preparing codebase default for deployment 
+i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[2025-05-23T04:14:11.925Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.925Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.925Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.925Z] Checked if tokens are valid: true, expires at: 1747976215694
+i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[2025-05-23T04:14:11.925Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.925Z] Checked if tokens are valid: true, expires at: 1747976215694
+i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[2025-05-23T04:14:11.926Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.926Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:11.926Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudfunctions.googleapis.com [none]
+[2025-05-23T04:14:11.926Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:11.927Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/runtimeconfig.googleapis.com [none]
+[2025-05-23T04:14:11.927Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/runtimeconfig.googleapis.com x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:11.929Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudbuild.googleapis.com [none]
+[2025-05-23T04:14:11.929Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudbuild.googleapis.com x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:11.931Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/artifactregistry.googleapis.com [none]
+[2025-05-23T04:14:11.932Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/artifactregistry.googleapis.com x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:12.129Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudfunctions.googleapis.com 200
+[2025-05-23T04:14:12.129Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudfunctions.googleapis.com [omitted]
+✔  functions: required API cloudfunctions.googleapis.com is enabled 
+[2025-05-23T04:14:12.212Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/runtimeconfig.googleapis.com 200
+[2025-05-23T04:14:12.212Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/runtimeconfig.googleapis.com [omitted]
+[2025-05-23T04:14:12.250Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudbuild.googleapis.com 200
+[2025-05-23T04:14:12.250Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/cloudbuild.googleapis.com [omitted]
+✔  functions: required API cloudbuild.googleapis.com is enabled 
+[2025-05-23T04:14:12.253Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/artifactregistry.googleapis.com 200
+[2025-05-23T04:14:12.253Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/artifactregistry.googleapis.com [omitted]
+✔  artifactregistry: required API artifactregistry.googleapis.com is enabled 
+[2025-05-23T04:14:12.253Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:12.253Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:12.253Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/cleveland-clean-portal/adminSdkConfig [none]
+[2025-05-23T04:14:12.551Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/cleveland-clean-portal/adminSdkConfig 200
+[2025-05-23T04:14:12.551Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/cleveland-clean-portal/adminSdkConfig {"projectId":"cleveland-clean-portal","storageBucket":"cleveland-clean-portal.firebasestorage.app"}
+[2025-05-23T04:14:12.552Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:12.552Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:12.552Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/cleveland-clean-portal/configs [none]
+[2025-05-23T04:14:12.755Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/cleveland-clean-portal/configs 200
+[2025-05-23T04:14:12.755Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/cleveland-clean-portal/configs {}
+[2025-05-23T04:14:12.756Z] Validating nodejs source
+⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[2025-05-23T04:14:13.703Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "lint": "eslint .",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "date-fns": "^2.30.0",
+    "date-fns-tz": "^2.0.1",
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-google": "^0.14.0",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[2025-05-23T04:14:13.703Z] Building nodejs source
+i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[2025-05-23T04:14:13.705Z] Could not find functions.yaml. Must use http discovery
+[2025-05-23T04:14:13.716Z] Found firebase-functions binary at '/Users/ali/Desktop/ClevelandCleanSolutionsProject/functions/node_modules/.bin/firebase-functions'
+Serving at port 8687
+
+Firebase Admin SDK initialized successfully (first time).
+
+[2025-05-23T04:14:15.003Z] Got response from /__/functions.yaml {"endpoints":{"createNewUser_v1":{"platform":"gcfv1","availableMemoryMb":256,"timeoutSeconds":60,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"createNewUser_v1"},"deleteAuthUser_v1":{"platform":"gcfv1","availableMemoryMb":256,"timeoutSeconds":60,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"deleteAuthUser_v1"},"updateUserPassword_v1":{"platform":"gcfv1","availableMemoryMb":256,"timeoutSeconds":60,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"updateUserPassword_v1"},"processCompletedJobsPayroll":{"platform":"gcfv1","availableMemoryMb":512,"timeoutSeconds":120,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"processCompletedJobsPayroll"},"addPayrollAdjustment":{"platform":"gcfv1","labels":{},"availableMemoryMb":256,"timeoutSeconds":60,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"addPayrollAdjustment"},"setAdminRole":{"platform":"gcfv1","labels":{},"availableMemoryMb":256,"timeoutSeconds":60,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"setAdminRole"},"generateScheduledServices":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","labels":{},"scheduleTrigger":{"schedule":"every day 05:00","retryConfig":{},"timeZone":"America/New_York"},"entryPoint":"generateScheduledServices"},"testAuthContext":{"platform":"gcfv1","labels":{},"availableMemoryMb":128,"timeoutSeconds":60,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"callableTrigger":{},"entryPoint":"testAuthContext"}},"specVersion":"v1alpha1","requiredAPIs":[{"api":"cloudscheduler.googleapis.com","reason":"Needed for scheduled functions."}],"extensions":{}}
+i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[2025-05-23T04:14:19.038Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.038Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.039Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/firebaseextensions.googleapis.com [none]
+[2025-05-23T04:14:19.039Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/firebaseextensions.googleapis.com x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:19.307Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/firebaseextensions.googleapis.com 200
+[2025-05-23T04:14:19.307Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/cleveland-clean-portal/services/firebaseextensions.googleapis.com [omitted]
+✔  extensions: required API firebaseextensions.googleapis.com is enabled 
+[2025-05-23T04:14:19.308Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[2025-05-23T04:14:19.308Z] > authorizing via signed-in user (walterringfield@clevelandcleansolutions.com)
+[2025-05-23T04:14:19.308Z] [iam] checking project cleveland-clean-portal for permissions ["firebase.projects.get","firebaseextensions.instances.list"]
+[2025-05-23T04:14:19.308Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.308Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.308Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions [none]
+[2025-05-23T04:14:19.309Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions x-goog-quota-user=projects/cleveland-clean-portal
+[2025-05-23T04:14:19.309Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[2025-05-23T04:14:19.530Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions 200
+[2025-05-23T04:14:19.531Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/cleveland-clean-portal:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[2025-05-23T04:14:19.531Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.531Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.531Z] >>> [apiv2][query] GET https://firebaseextensions.googleapis.com/v1beta/projects/cleveland-clean-portal/instances pageSize=100&pageToken=
+[2025-05-23T04:14:19.879Z] <<< [apiv2][status] GET https://firebaseextensions.googleapis.com/v1beta/projects/cleveland-clean-portal/instances 200
+[2025-05-23T04:14:19.879Z] <<< [apiv2][body] GET https://firebaseextensions.googleapis.com/v1beta/projects/cleveland-clean-portal/instances {}
+i  functions: preparing functions directory for uploading... 
+i  functions: packaged /Users/ali/Desktop/ClevelandCleanSolutionsProject/functions (90.73 KB) for uploading 
+i  functions: packaged /Users/ali/Desktop/ClevelandCleanSolutionsProject/functions (90.96 KB) for uploading 
+[2025-05-23T04:14:19.941Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.942Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:19.942Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/cleveland-clean-portal/locations/-/functions [none]
+[2025-05-23T04:14:20.424Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/cleveland-clean-portal/locations/-/functions 200
+[2025-05-23T04:14:20.424Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/cleveland-clean-portal/locations/-/functions {}
+[2025-05-23T04:14:20.424Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:20.425Z] Checked if tokens are valid: true, expires at: 1747976215694
+[2025-05-23T04:14:20.425Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/cleveland-clean-portal/locations/-/functions filter=environment%3D%22GEN_2%22
+[2025-05-23T04:14:20.821Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/cleveland-clean-portal/locations/-/functions 200
+[2025-05-23T04:14:20.822Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/cleveland-clean-portal/locations/-/functions {"functions":[{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/updateUserPassword_v1","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/7f9f6001-9ce5-4054-af6f-3114bd67a1e3","runtime":"nodejs22","entryPoint":"updateUserPassword_v1","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"updateUserPassword_v1/function-source.zip","generation":"1747965883112306"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"updateUserPassword_v1/function-source.zip","generation":"1747965883112306"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/updateuserpassword-v1","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/updateUserPassword_v1","FUNCTION_TARGET":"updateUserPassword_v1","LOG_EXECUTION_ID":"true","FUNCTION_SIGNATURE_TYPE":"http"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://updateuserpassword-v1-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"updateuserpassword-v1-00025-ved","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:04:54.424772514Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"a17344c08a57b68ed1e229f3d8fc1ec0d72f7faa"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/updateUserPassword_v1","createTime":"2025-04-28T18:09:08.102497645Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/testAuthContext","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/553c66e9-5c5e-4050-b4e0-ab1e94c1783d","runtime":"nodejs22","entryPoint":"testAuthContext","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"testAuthContext/function-source.zip","generation":"1747967715502917"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"testAuthContext/function-source.zip","generation":"1747967715502917"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/testauthcontext","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/testAuthContext","FUNCTION_TARGET":"testAuthContext","LOG_EXECUTION_ID":"true"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://testauthcontext-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"testauthcontext-00001-pam","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:36:32.832266499Z","labels":{"firebase-functions-hash":"4392890374ee05d8ae3e3f036d1383b4e07d8d20","deployment-tool":"cli-firebase","deployment-callable":"true"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/testAuthContext","createTime":"2025-05-23T02:35:15.738786379Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/deleteAuthUser","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/ad6717e2-8797-4cd0-a6d4-66a273e1d94e","runtime":"nodejs22","entryPoint":"deleteAuthUser","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"deleteAuthUser/function-source.zip","generation":"1745330567620402"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"deleteAuthUser/function-source.zip","generation":"1745330567620402"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"state":"FAILED","updateTime":"2025-04-22T14:03:02.704279659Z","labels":{"deployment-callable":"true","firebase-functions-hash":"f4245d3896a8ef72fbf68af52f162ff433838dd8","deployment-tool":"cli-firebase"},"stateMessages":[{"severity":"ERROR","type":"CloudRunServiceNotFound","message":"Cloud Run service projects/cleveland-clean-portal/locations/us-central1/services/deleteauthuser for the function was not found. The function will not work correctly. Please redeploy."}],"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/deleteAuthUser","createTime":"2025-04-22T14:02:47.884828376Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/generateScheduledServices","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/7f9f6001-9ce5-4054-af6f-3114bd67a1e3","runtime":"nodejs22","entryPoint":"generateScheduledServices","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"generateScheduledServices/function-source.zip","generation":"1747965883146600"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"generateScheduledServices/function-source.zip","generation":"1747965883146600"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/generatescheduledservices","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/generateScheduledServices","FUNCTION_TARGET":"generateScheduledServices","LOG_EXECUTION_ID":"true","FUNCTION_SIGNATURE_TYPE":"http"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://generatescheduledservices-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"generatescheduledservices-00026-yew","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:04:54.587079294Z","labels":{"deployment-tool":"cli-firebase","deployment-scheduled":"true","firebase-functions-hash":"a17344c08a57b68ed1e229f3d8fc1ec0d72f7faa"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/generateScheduledServices","createTime":"2025-04-29T14:32:45.745778349Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/setAdminRole","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/7f9f6001-9ce5-4054-af6f-3114bd67a1e3","runtime":"nodejs22","entryPoint":"setAdminRole","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"setAdminRole/function-source.zip","generation":"1747965883209644"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"setAdminRole/function-source.zip","generation":"1747965883209644"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/setadminrole","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/setAdminRole","FUNCTION_TARGET":"setAdminRole","LOG_EXECUTION_ID":"true","FUNCTION_SIGNATURE_TYPE":"http"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://setadminrole-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"setadminrole-00009-duw","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:04:54.458452311Z","labels":{"firebase-functions-hash":"a17344c08a57b68ed1e229f3d8fc1ec0d72f7faa","deployment-tool":"cli-firebase","deployment-callable":"true"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/setAdminRole","createTime":"2025-05-21T17:54:51.509970501Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/deleteAuthUser_v1","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/7f9f6001-9ce5-4054-af6f-3114bd67a1e3","runtime":"nodejs22","entryPoint":"deleteAuthUser_v1","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"deleteAuthUser_v1/function-source.zip","generation":"1747965883100091"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"deleteAuthUser_v1/function-source.zip","generation":"1747965883100091"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/deleteauthuser-v1","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/deleteAuthUser_v1","FUNCTION_TARGET":"deleteAuthUser_v1","LOG_EXECUTION_ID":"true","FUNCTION_SIGNATURE_TYPE":"http"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://deleteauthuser-v1-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"deleteauthuser-v1-00030-tir","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:04:54.587282783Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"a17344c08a57b68ed1e229f3d8fc1ec0d72f7faa"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/deleteAuthUser_v1","createTime":"2025-04-24T03:37:29.110545340Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/createNewUser","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/bf7a607d-8026-4f60-8b4f-5cdaecbf3d16","runtime":"nodejs22","entryPoint":"createNewUser","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"createNewUser/function-source.zip","generation":"1745330540506300"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"createNewUser/function-source.zip","generation":"1745330540506300"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"state":"FAILED","updateTime":"2025-04-22T14:02:37.882809062Z","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"f4245d3896a8ef72fbf68af52f162ff433838dd8"},"stateMessages":[{"severity":"ERROR","type":"CloudRunServiceNotFound","message":"Cloud Run service projects/cleveland-clean-portal/locations/us-central1/services/createnewuser for the function was not found. The function will not work correctly. Please redeploy."}],"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/createNewUser","createTime":"2025-04-22T14:02:20.761112811Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/createNewUser_v1","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/7f9f6001-9ce5-4054-af6f-3114bd67a1e3","runtime":"nodejs22","entryPoint":"createNewUser_v1","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"createNewUser_v1/function-source.zip","generation":"1747965824467375"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"createNewUser_v1/function-source.zip","generation":"1747965824467375"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/createnewuser-v1","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/createNewUser_v1","FUNCTION_TARGET":"createNewUser_v1","LOG_EXECUTION_ID":"true","FUNCTION_SIGNATURE_TYPE":"http"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://createnewuser-v1-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"createnewuser-v1-00030-qug","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:04:46.420339076Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"a17344c08a57b68ed1e229f3d8fc1ec0d72f7faa"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/createNewUser_v1","createTime":"2025-04-24T03:36:31.369320854Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/addPayrollAdjustment","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/7f9f6001-9ce5-4054-af6f-3114bd67a1e3","runtime":"nodejs22","entryPoint":"addPayrollAdjustment","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"addPayrollAdjustment/function-source.zip","generation":"1747965883333180"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"addPayrollAdjustment/function-source.zip","generation":"1747965883333180"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/addpayrolladjustment","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/addPayrollAdjustment","FUNCTION_TARGET":"addPayrollAdjustment","LOG_EXECUTION_ID":"true","FUNCTION_SIGNATURE_TYPE":"http"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://addpayrolladjustment-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"addpayrolladjustment-00022-tam","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:04:55.240176276Z","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"a17344c08a57b68ed1e229f3d8fc1ec0d72f7faa"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/addPayrollAdjustment","createTime":"2025-05-06T02:08:34.092377689Z","satisfiesPzi":true},{"name":"projects/cleveland-clean-portal/locations/us-central1/functions/processCompletedJobsPayroll","buildConfig":{"build":"projects/938625547862/locations/us-central1/builds/7f9f6001-9ce5-4054-af6f-3114bd67a1e3","runtime":"nodejs22","entryPoint":"processCompletedJobsPayroll","source":{"storageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"processCompletedJobsPayroll/function-source.zip","generation":"1747965883084095"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/cleveland-clean-portal/locations/us-central1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-938625547862-us-central1","object":"processCompletedJobsPayroll/function-source.zip","generation":"1747965883084095"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/cleveland-clean-portal/serviceAccounts/938625547862-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/cleveland-clean-portal/locations/us-central1/services/processcompletedjobspayroll","timeoutSeconds":60,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"cleveland-clean-portal\",\"storageBucket\":\"cleveland-clean-portal.firebasestorage.app\"}","GCLOUD_PROJECT":"cleveland-clean-portal","EVENTARC_CLOUD_EVENT_SOURCE":"projects/cleveland-clean-portal/locations/us-central1/services/processCompletedJobsPayroll","FUNCTION_TARGET":"processCompletedJobsPayroll","LOG_EXECUTION_ID":"true","FUNCTION_SIGNATURE_TYPE":"http"},"maxInstanceCount":40,"ingressSettings":"ALLOW_ALL","uri":"https://processcompletedjobspayroll-i62m6ej2ma-uc.a.run.app","serviceAccountEmail":"938625547862-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"processcompletedjobspayroll-00022-tuw","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-05-23T02:04:54.973857262Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"a17344c08a57b68ed1e229f3d8fc1ec0d72f7faa"},"environment":"GEN_2","url":"https://us-central1-cleveland-clean-portal.cloudfunctions.net/processCompletedJobsPayroll","createTime":"2025-05-06T02:07:26.261259749Z","satisfiesPzi":true}]}
+
+Error: Cannot set CPU on the functions createNewUser_v1,deleteAuthUser_v1,updateUserPassword_v1,processCompletedJobsPayroll,addPayrollAdjustment,setAdminRole,testAuthContext because they are GCF gen 1

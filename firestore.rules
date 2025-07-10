@@ -1,0 +1,220 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+    // (No changes needed here)
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+    function hasClaim(role) {
+      return request.auth != null && request.auth.token != null && request.auth.token[role] == true;
+    }
+    function getUserData(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) ?
+             get(/databases/$(database)/documents/users/$(userId)).data : null;
+    }
+    function hasRoleInFirestore(userId, role) {
+      let userData = getUserData(userId);
+      return userData != null && userData.role == role;
+    }
+    function isProfileOwner(profileDocId) {
+      return isLoggedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData(request.auth.uid).profileId == profileDocId;
+    }
+    function isResourceOwner(userId) {
+      return isLoggedIn() && request.auth.uid == userId;
+    }
+
+    // --- users Collection Rules ---
+    match /users/{userId} {
+      allow read: if isLoggedIn() && (isResourceOwner(userId) || hasClaim('admin'));
+      allow create: if false; // Cloud Functions handle creation
+      allow update: if hasClaim('admin'); // Only admins can update user docs directly
+      allow delete: if false; // Deletion handled by Cloud Function
+    }
+
+    // --- clientMasterList Rules ---
+    match /clientMasterList/{clientDocId} {
+      function clientCanUpdateProfileFields() {
+        let allowedKeys = ['contactName', 'phone', 'updatedAt'];
+        return request.resource.data.contactName is string && request.resource.data.contactName.size() > 0 &&
+               request.resource.data.phone is string &&
+               request.resource.data.updatedAt is timestamp &&
+               request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys);
+      } // REMOVED ; from end of function block
+
+      allow read: if hasClaim('admin') || (hasClaim('client') && isProfileOwner(clientDocId));
+      allow create: if hasClaim('admin');
+      allow update: if hasClaim('admin') ||
+                       (hasClaim('client') && isProfileOwner(clientDocId) && clientCanUpdateProfileFields());
+      allow delete: if hasClaim('admin');
+    }
+
+    // --- employeeMasterList Rules ---
+match /employeeMasterList/{employeeDocId} {
+  function employeeCanUpdateProfileFields() {
+    let allowedKeys = ['phone', 'firstName', 'lastName', 'updatedAt'];
+    return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys) &&
+           request.resource.data.updatedAt is timestamp;
+  }
+
+  allow read: if hasClaim('admin') || // Admins can always read
+                (isLoggedIn() && // User must be logged in
+                 hasRoleInFirestore(request.auth.uid, 'employee') && // Their role in /users/{uid} must be 'employee'
+                 isProfileOwner(employeeDocId)); // And they must be the owner of this profile
+
+  allow create: if hasClaim('admin');
+  allow update: if hasClaim('admin') || (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isProfileOwner(employeeDocId) && employeeCanUpdateProfileFields());
+  allow delete: if hasClaim('admin');
+}
+
+    // --- locations Collection Rules ---
+    match /locations/{locationDocId} {
+      allow read: if isLoggedIn();
+      allow create, update, delete: if hasClaim('admin');
+    }
+
+    // --- servicePhotos Collection Rules ---
+    match /servicePhotos/{photoId} {
+      function isValidPhotoData(photoData) {
+        return isLoggedIn() && hasClaim('employee') &&
+               photoData.employeeProfileId == request.auth.uid &&
+               photoData.locationId is string && photoData.locationId != '' &&
+               photoData.photoUrl is string && photoData.photoUrl.matches('https://firebasestorage.googleapis.com/.*') &&
+               photoData.uploadedAt is timestamp;
+      } // REMOVED ; from end of function block
+
+      function employeeCanUpdatePhotoNotes() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notes', 'updatedAt']) &&
+               request.resource.data.notes is string &&
+               request.resource.data.updatedAt is timestamp;
+      } // REMOVED ; from end of function block
+
+      allow create: if isValidPhotoData(request.resource.data);
+      allow read: if hasClaim('admin') || hasClaim('client') ||
+                     (hasClaim('employee') && resource.data.employeeProfileId == request.auth.uid);
+      allow update: if hasClaim('admin') ||
+                       (hasClaim('employee') && resource.data.employeeProfileId == request.auth.uid && employeeCanUpdatePhotoNotes());
+      allow delete: if hasClaim('admin') ||
+                       (hasClaim('employee') && resource.data.employeeProfileId == request.auth.uid);
+    }
+
+    // --- employeeTimeTracking Rules ---
+match /employeeTimeTracking/{entryDocId} {
+  // Helper to check if the logged-in user's profileId from /users collection
+  // matches the employeeProfileId stored in the time tracking document.
+  function isTimeEntryOwner() {
+    let userDocData = getUserData(request.auth.uid); // Use existing helper
+    return userDocData != null && resource.data.employeeProfileId == userDocData.profileId;
+  }
+
+  // Helper to check if the data being created is valid AND
+  // if the employeeProfileId being written matches the creator's own profileId.
+  function isValidTimeEntryDataForCreate(entryData) {
+    let userDocData = getUserData(request.auth.uid);
+    return isLoggedIn() &&
+           hasRoleInFirestore(request.auth.uid, 'employee') && // User's role in /users is 'employee'
+           userDocData != null &&
+           entryData.employeeProfileId == userDocData.profileId && // Creating for themselves
+           entryData.locationId is string && entryData.locationId != '' &&
+           entryData.status is string && entryData.status == "Clocked In" &&
+           entryData.clockInTime is timestamp &&
+           entryData.clockOutTime == null &&
+           (entryData.clockInCoordinates == null || entryData.clockInCoordinates is latlng) &&
+           entryData.createdAt is timestamp &&
+           entryData.updatedAt is timestamp;
+  }
+
+  // Employees need to update their own entries to clock out
+  function employeeCanClockOut(updatedEntryData) {
+    let userDocData = getUserData(request.auth.uid);
+    // Check that they are only modifying specific fields for clock-out
+    let allowedUpdateKeys = ['clockOutTime', 'status', 'clockOutCoordinates', 'updatedAt'];
+    return isLoggedIn() &&
+           hasRoleInFirestore(request.auth.uid, 'employee') &&
+           userDocData != null &&
+           resource.data.employeeProfileId == userDocData.profileId && // Must own the record
+           updatedEntryData.status == "Clocked Out" &&
+           updatedEntryData.clockOutTime is timestamp &&
+           (updatedEntryData.clockOutCoordinates == null || updatedEntryData.clockOutCoordinates is latlng) &&
+           updatedEntryData.updatedAt is timestamp &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUpdateKeys);
+  }
+
+  allow read: if hasClaim('admin') ||
+                (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isTimeEntryOwner());
+
+  allow create: if isValidTimeEntryDataForCreate(request.resource.data);
+
+  // Allow admin to update anything. Allow employee to update ONLY for clocking out.
+  allow update: if hasClaim('admin') || employeeCanClockOut(request.resource.data);
+
+  allow delete: if false; // Or if hasClaim('admin') if needed
+}
+
+    // --- serviceHistory Rules (SIMPLIFIED UPDATE RULE v2) ---
+    match /serviceHistory/{jobDocId} {
+      function isAssignedEmployee() {
+         // MODIFIED: Changed filter syntax from 'a => a.employeeId' to '__item__, __item__.employeeId'
+         return isLoggedIn() && hasClaim('employee') &&
+                resource.data.employeeAssignments is list &&
+                resource.data.employeeAssignments.filter(__item__, __item__.employeeId == request.auth.uid).size() > 0;
+      } // REMOVED ; from end of function block
+
+      function isJobClient() {
+        return hasClaim('client') &&
+               isLoggedIn() &&
+               exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+               getUserData(request.auth.uid).profileId == resource.data.clientProfileId;
+      } // REMOVED ; from end of function block
+
+      function isValidServiceHistoryData(jobData) {
+        return jobData.clientProfileId is string && jobData.clientProfileId != '' &&
+               jobData.locationId is string && jobData.locationId != '' &&
+               jobData.serviceDate is timestamp &&
+               (jobData.employeeAssignments == null || jobData.employeeAssignments is list) &&
+               jobData.status is string && jobData.status != '' &&
+               jobData.createdAt is timestamp &&
+               jobData.updatedAt is timestamp;
+      } // REMOVED ; from end of function block
+
+      allow read: if hasClaim('admin') || isJobClient() || isAssignedEmployee();
+      allow create: if hasClaim('admin') && isValidServiceHistoryData(request.resource.data);
+      allow update: if request.auth != null && request.auth.token.admin == true;
+      allow delete: if hasClaim('admin');
+    } // <<< End serviceHistory match
+
+    // --- employeeRates Rules ---
+    match /employeeRates/{rateId} {
+      allow read, write, delete: if hasClaim('admin');
+    }
+
+    // --- employeePayroll Rules ---
+match /employeePayroll/{payrollDocId} {
+  // Helper to check if the logged-in user's profileId from /users collection
+  // matches the employeeProfileId stored in the payroll document.
+  function isPayrollOwner() {
+    let userDocData = getUserData(request.auth.uid); // Use existing helper
+    return userDocData != null && resource.data.employeeProfileId == userDocData.profileId;
+  }
+
+  allow read: if hasClaim('admin') ||
+                (isLoggedIn() &&
+                 hasRoleInFirestore(request.auth.uid, 'employee') &&
+                 isPayrollOwner()); // Employee can read their own payroll doc
+
+  allow update, delete: if hasClaim('admin'); // Only admins can modify/delete
+  allow create: if false; // Only Cloud Function creates
+}
+
+    // --- counters Collection Rules ---
+    match /counters/ids {
+      allow read: if hasClaim('admin');
+      allow write: if false; // Only Cloud Function modifies
+    }
+
+  } // End match /databases/{database}/documents
+} // End service cloud.firestore

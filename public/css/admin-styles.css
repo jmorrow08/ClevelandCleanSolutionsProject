@@ -1,0 +1,197 @@
+        /* Styles unchanged */
+        #admin-dashboard-content { padding: 20px; max-width: 1200px; margin: auto; font-family: sans-serif; }
+        #logout-button { }
+        #client-table th, #client-table td,
+        #employee-table th, #employee-table td,
+        #locations-table th, #locations-table td,
+        #service-history-table th, #service-history-table td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: top; white-space: nowrap; } /* Added history table */
+        #client-table th, #employee-table th, #locations-table th, #service-history-table th { background-color: #f8f9fa; font-weight: bold; text-align: left; } /* Added history table */
+        #client-loading-message.error, #employee-loading-message.error, #locations-loading-message.error, #photos-loading-message.error, #service-history-loading-message.error { color: #dc3545; } /* Added history loading */
+        .form-section { border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-bottom: 20px; background-color: #f8f9fa; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"], .form-group input[type="email"], .form-group input[type="tel"], .form-group input[type="password"], .form-group input[type="date"], .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; font-size: inherit; } /* Added date, textarea */
+        .form-group input[readonly] { background-color: #e9ecef; opacity: 1; cursor: not-allowed; }
+        .form-group small { font-size: 0.8em; color: #6c757d; }
+        .form-actions { margin-top: 15px; }
+        .admin-action-button, .save-button, .cancel-button, .edit-button, .delete-button, .action-button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; font-weight: bold; margin-bottom: 5px; /* Added for wrapping */ }
+        .admin-action-button { background-color: #007bff; color: white; }
+        .action-button { background-color: #17a2b8; color: white; padding: 5px 10px; font-size: 12px; }
+        .save-button { background-color: #28a745; color: white; }
+        .cancel-button { background-color: #6c757d; color: white; }
+        .edit-button { background-color: #ffc107; color: black; padding: 5px 10px; font-size: 12px; }
+        .delete-button { background-color: #dc3545; color: white; padding: 5px 10px; font-size: 12px; margin-left: 5px; }
+        .form-message { margin-top: 10px; font-weight: bold; min-height: 1.2em; }
+        .form-message.success { color: #155724; background-color:#d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 5px; }
+        .form-message.error { color: #721c24; background-color:#f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 5px; }
+        .form-message.info { color: #0c5460; background-color:#d1ecf1; border: 1px solid #bee5eb; padding: 10px; border-radius: 5px; }
+        .table-wrapper { overflow-x: auto; max-width: 100%; margin-bottom: 1em; }
+        .table-wrapper table { min-width: 800px; /* Adjust min-width as needed */ width: 100%; }
+
+        /* Styles for Photo Display */
+        #location-photos-container .photo-item { border: 1px solid #ddd; padding: 10px; border-radius: 5px; background-color: #fff; width: 200px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        #location-photos-container .photo-item img { max-width: 100%; height: auto; display: block; margin-bottom: 8px; cursor: pointer; object-fit: cover; max-height: 150px; }
+        #location-photos-container .photo-item p { font-size: 0.85em; margin: 3px 0; word-wrap: break-word; line-height: 1.3; }
+        #location-photos-container .photo-item p strong { color: #333; }
+
+         /* Adjust grid column span for textarea */
+         #add-edit-service-history-form .form-group[style*="grid-column"] { grid-column: 1 / -1; }
+         
+        /* Basic styling for dashboard layout - Move to admin-styles.css and refine */
+        body { font-family: sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        #admin-dashboard-content { max-width: 1200px; margin: 0 auto; }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd; /* Lighter border */
+            margin-bottom: 25px;
+        }
+        .dashboard-header h1 {
+            margin: 0;
+            color: #2c3e50; /* Darker blue-grey */
+            font-size: 2em; 
+        }
+        .dashboard-nav {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px; 
+        }
+        /* Style .nav-button consistently if they are also .admin-action-button */
+        .nav-button.admin-action-button { 
+            /* Ensure consistent styling from admin-styles.css or add specific overrides */
+        }
+        .dashboard-main-content {
+            /* Main container for widget rows */
+        }
+        .dashboard-row {
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 25px; 
+            margin-bottom: 25px;
+        }
+        .dashboard-widget {
+            flex: 1; 
+            min-width: 320px; 
+            border: 1px solid #e0e0e0;
+            border-radius: 8px; 
+            padding: 20px;
+            background-color: #ffffff; 
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08); 
+        }
+        .dashboard-widget h2, .dashboard-widget h3 { 
+            margin-top: 0;
+            color: #34495e; /* Slightly different heading color */
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+         .dashboard-widget h4 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #34495e;
+            font-size: 1.1em;
+        }
+        .service-list-widget ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        .service-list-widget li {
+            padding: 10px 5px;
+            border-bottom: 1px dotted #eaeaea;
+            font-size: 0.95em;
+        }
+        .service-list-widget li:last-child {
+            border-bottom: none;
+        }
+        .service-list-widget strong {
+            color: #2980b9; /* Accent color for client/location names */
+        }
+        .service-list-widget .details-link {
+            font-size: 0.9em;
+            margin-left: 10px;
+            text-decoration: none;
+        }
+
+        .loading-text, .error-message, .form-message { 
+            font-style: italic;
+            color: #555;
+            padding: 10px 0;
+        }
+        .error-message { color: #c0392b; } /* More distinct error color */
+        .form-message.success { color: #27ae60; }
+        .form-message.info { color: #2980b9; }
+
+        #quick-add-service-form-container {
+            border-radius: 6px;
+            margin-top: 15px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+        }
+        .dashboard-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 0.9em;
+            color: #777;
+        }
+
+        /* Styles for the modal close button */
+#service-history-editor-modal .close-button { /* Be more specific to the editor modal's button */
+    color: #777; /* Slightly darker grey */
+    position: absolute;
+    top: 10px; /* Adjust for better placement */
+    right: 15px; /* Adjust for better placement */
+    font-size: 2.5em; /* Make it larger */
+    font-weight: bold;
+    line-height: 1;
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out, color 0.2s ease-in-out; /* Smooth transition */
+}
+
+#service-history-editor-modal .close-button:hover,
+#service-history-editor-modal .close-button:focus {
+    color: #000; /* Darker on hover */
+    text-decoration: none;
+    cursor: pointer;
+    opacity: 1;
+}
+
+/* Styles for photo review within the service history editor modal */
+#service-history-editor-modal #sh-photo-review-gallery.photos-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Adjust min size for more items per row */
+    max-height: 280px; /* Or a height that fits your modal well */
+    gap: 8px; /* Slightly smaller gap */
+    padding: 8px;
+}
+
+#service-history-editor-modal #sh-photo-review-gallery .photo-item {
+    padding: 5px; /* Adjust padding */
+}
+
+#service-history-editor-modal #sh-photo-review-gallery .photo-item img {
+    height: 75px; /* Adjust image height */
+    margin-bottom: 5px; /* Space below image */
+}
+
+#service-history-editor-modal #sh-photo-review-gallery .photo-item p,
+#service-history-editor-modal #sh-photo-review-gallery .photo-item label {
+    font-size: 0.7em; /* Smaller text for notes/labels in modal */
+}
+
+#service-history-editor-modal .form-group {
+    /* max-width: 400px; /* Or whatever looks good if they are stretching too much */
+    /* margin-bottom: 15px; /* Consistent spacing */
+}
+        /* Make sure admin-action-button, save-button, cancel-button have good base styles */
+    

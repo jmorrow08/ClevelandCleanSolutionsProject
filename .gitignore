@@ -1,0 +1,24 @@
+# Firebase Service Account Key - DO NOT COMMIT
+cleveland-clean-portal-firebase-adminsdk-fbsvc-5fdf0c2694.json
+
+# Node modules
+node_modules/
+functions/node_modules/
+
+# Mac system files
+.DS_Store
+
+# Firebase emulator files & logs
+.firebase/emulators/
+firebase-debug.log
+firestore-debug.log # You already have this, good to keep in .gitignore
+ui-debug.log
+pubsub-debug.log
+database-debug.log
+
+# Unusual RTF file if it's not the actual eslintrc
+.eslintrc.js.rtf
+
+# Build files or other large/generated files (add as needed)
+# build/
+# dist/

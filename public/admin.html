@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Cleveland Clean Solutions</title>
+    <link rel="stylesheet" href="css/admin-styles.css">
+    <style>
+        /* Basic styling for the portal switch button if not in admin-styles.css */
+        .portal-switch-button-emp {
+            background-color: #17a2b8; /* A different color for distinction */
+            color: white; 
+            /* Inherit other styles from .nav-button or .admin-action-button or define fully */
+        }
+        /* Ensure modal content can scroll if form is long */
+        #service-history-editor-modal .modal-content {
+            max-height: 90vh; /* Example: 90% of viewport height */
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div id="admin-loading-message" style="text-align: center; padding: 50px; font-size: 1.2em;">Loading Admin Portal... Please wait.</div>
+
+<div id="admin-dashboard-content" style="display: none;"> 
+    <header class="dashboard-header">
+        <h1 id="welcome-message">Admin Dashboard</h1> 
+        <button id="logout-button" class="admin-action-button danger-button">Logout</button>
+    </header>
+
+    <nav class="dashboard-nav">
+        <a href="employee/" id="go-to-employee-portal-link" class="nav-button admin-action-button portal-switch-button-emp" style="display: none;">Switch to Employee View</a>
+        <a href="admin-employees.html" class="nav-button admin-action-button">Manage Employees</a>
+        <a href="admin-clients-locations.html" id="show-clients-locations-link" class="nav-button admin-action-button">Manage Clients & Locations</a>
+        <a href="admin-service-history.html" class="nav-button admin-action-button">Service History</a>
+        <a href="admin-payroll.html" id="show-payroll-viewing-link" class="nav-button admin-action-button" style="background-color: #28a745;">View Payroll</a>
+    </nav>
+    
+    <main class="dashboard-main-content">
+        <section class="dashboard-row">
+            <div class="dashboard-widget" id="quick-stats-widget" style="flex-grow: 1; flex-basis: 300px;">
+                <h2>At a Glance</h2>
+                <p>Services Scheduled Today: <strong id="stats-today-count">-</strong></p>
+                <p>Services Scheduled Tomorrow: <strong id="stats-tomorrow-count">-</strong></p>
+                <p>Services Awaiting Review: <strong id="stats-review-count">-</strong></p>
+                <p>Completed - Pending Payroll: <strong id="stats-pending-payroll-count">-</strong></p>
+                <p>Active Clients: <strong id="stats-active-clients-count">-</strong></p> 
+                <p>Active Employees: <strong id="stats-active-employees-count">-</strong></p> 
+            </div>
+            <div class="dashboard-widget" id="quick-actions-widget" style="flex-grow: 2; flex-basis: 400px;">
+                <h2>Quick Actions</h2>
+                <button id="trigger-payroll-button" class="admin-action-button" style="background-color: #fd7e14; color: white; margin-bottom:10px;">Process New Payroll</button>
+                <p id="payroll-processing-message" class="form-message" style="display: none; margin-bottom:15px;"></p>
+                
+                <button id="quick-add-service-button" class="admin-action-button" style="margin-bottom:10px;">Quick Add New Service</button>
+                <div id="quick-add-service-form-container" style="display:none;">
+                    <h4>New Service Request</h4>
+                    <form id="quick-add-service-form">
+                        <div class="form-group">
+                            <label for="qas-client-select">Client:</label>
+                            <select id="qas-client-select" required><option value="">Loading Clients...</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="qas-location-select">Location:</label>
+                            <select id="qas-location-select" required><option value="">Select Client First</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="qas-service-date">Service Date:</label>
+                            <input type="date" id="qas-service-date" required>
+                        </div>
+                         <div class="form-group">
+                            <label for="qas-service-time">Service Time (Optional, e.g., 09:00 AM):</label>
+                            <input type="time" id="qas-service-time">
+                        </div>
+                        <div class="form-group">
+                            <label for="qas-service-type">Service Type / Notes:</label>
+                            <input type="text" id="qas-service-type" placeholder="e.g., Regular Cleaning, Special Request">
+                        </div>
+                        <button type="submit" class="save-button">Schedule Service</button>
+                        <button type="button" id="qas-cancel-button" class="cancel-button">Cancel</button>
+                        <div id="qas-message" class="form-message"></div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard-row">
+            <div class="dashboard-widget" id="today-services-widget">
+                <h2>Services Scheduled for Today</h2>
+                <div id="today-services-list" class="service-list-widget">
+                    <p class="loading-text">Loading today's services...</p>
+                </div>
+            </div>
+            <div class="dashboard-widget" id="tomorrow-services-widget">
+                <h2>Services Scheduled for Tomorrow</h2>
+                <div id="tomorrow-services-list" class="service-list-widget">
+                    <p class="loading-text">Loading tomorrow's services...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard-row">
+            <div class="dashboard-widget" id="pending-payroll-widget"> 
+                <h2>Completed Jobs - Pending Payroll</h2> 
+                <div id="pending-payroll-list" class="service-list-widget"> 
+                    <p class="loading-text">Loading jobs pending payroll...</p>
+                </div>
+            </div>
+            <div class="dashboard-widget" id="awaiting-review-widget">
+                <h2>Services Awaiting Final Review</h2>
+                <div id="awaiting-review-list" class="service-list-widget">
+                    <p class="loading-text">Loading services needing review...</p>
+                </div>
+            </div>
+            <div class="dashboard-widget" id="cancel-reschedule-widget">
+                <h2>Cancel / Reschedule Service</h2>
+                <p><em>(Functionality to be built)</em></p>
+                 <input type="text" id="search-scheduled-service-input" placeholder="Search by Client/Location..." style="width: 90%; margin-bottom:10px;">
+                <div id="cancel-reschedule-search-results"></div>
+            </div>
+        </section>
+        
+        <div id="admin-security-section" class="form-section" style="margin-top: 30px; padding-top:20px; border-top: 1px solid #ddd;">
+              <h3>Admin Security</h3>
+             <div id="show-password-button-container">
+                <button id="show-admin-password-form-btn" class="admin-action-button" style="background-color: #ffc107; color: black;">Change My Password</button>
+             </div>
+             <div id="change-password-section" style="display: none;">
+                <h4>Change Your Admin Password</h4>
+                <form id="change-password-form">
+                    <div class="form-group">
+                        <label for="current-password">Current Password:</label>
+                        <input type="password" id="current-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">New Password (min. 6 characters):</label>
+                        <input type="password" id="new-password" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm New Password:</label>
+                        <input type="password" id="confirm-password" required minlength="6">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" id="update-password-button" class="save-button">Update Password</button>
+                        <button type="button" id="cancel-change-password-btn" class="cancel-button">Cancel</button>
+                    </div>
+                </form>
+                <div id="password-message" class="form-message"></div>
+             </div>
+        </div>
+
+        <div id="service-history-editor-modal" class="modal-like-section" style="display: none; z-index: 1060;"> 
+            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;"> <span id="close-sh-editor-modal-button" class="close-button">&times;</span>
+                <div id="sh-editor-content-target">
+                    <p class="loading-text">Loading service editor...</p> 
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="dashboard-footer">
+        <p>&copy; <span id="currentYear"></span> Cleveland Clean Solutions</p>
+    </footer>
+</div> 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script> 
+<script>
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAJEuOcNLg8dYtzhMEyhMZtidfIXNALcgU", // Ensure this is your actual API key
+    authDomain: "cleveland-clean-portal.firebaseapp.com",
+    projectId: "cleveland-clean-portal",
+    storageBucket: "cleveland-clean-portal.appspot.com",
+    messagingSenderId: "938625547862",
+    appId: "1:938625547862:web:3655b2b380b858702705f7",
+    measurementId: "G-7KZMMKZ1XW"
+  };
+  // Initialize Firebase
+  if (!firebase.apps.length) {
+     firebase.initializeApp(firebaseConfig);
+  } else {
+     firebase.app(); 
+  }
+  // Dynamically set current year in footer
+  const currentYearEl = document.getElementById('currentYear');
+  if (currentYearEl) {
+    currentYearEl.textContent = new Date().getFullYear();
+  }
+</script>
+
+<script src="js/admin-portal.js"></script>
+<script src="js/admin-service-history.js" defer></script> 
+</body>
+</html>
