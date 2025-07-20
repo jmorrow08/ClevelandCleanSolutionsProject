@@ -145,6 +145,40 @@
             color: #777;
         }
 
+        /* Modal overlay and positioning styles */
+        .modal-like-section {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            margin: auto;
+        }
+
+        /* Ensure modal appears above other content */
+        #service-history-editor-modal {
+            z-index: 1060 !important;
+        }
+
         /* Styles for the modal close button */
 #service-history-editor-modal .close-button { /* Be more specific to the editor modal's button */
     color: #777; /* Slightly darker grey */
@@ -169,24 +203,30 @@
 
 /* Styles for photo review within the service history editor modal */
 #service-history-editor-modal #sh-photo-review-gallery.photos-grid-container {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Adjust min size for more items per row */
-    max-height: 280px; /* Or a height that fits your modal well */
-    gap: 8px; /* Slightly smaller gap */
-    padding: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; /* Smaller columns for modal */
+    max-height: 250px !important; /* Adjust height for modal */
+    gap: 8px !important; /* Smaller gap in modal */
+    padding: 8px !important;
 }
 
 #service-history-editor-modal #sh-photo-review-gallery .photo-item {
-    padding: 5px; /* Adjust padding */
+    padding: 8px !important; /* Slightly smaller padding in modal */
 }
 
 #service-history-editor-modal #sh-photo-review-gallery .photo-item img {
-    height: 75px; /* Adjust image height */
-    margin-bottom: 5px; /* Space below image */
+    width: 60px !important; /* Smaller thumbnail in modal */
+    height: 60px !important;
+    margin-bottom: 6px !important;
 }
 
-#service-history-editor-modal #sh-photo-review-gallery .photo-item p,
+#service-history-editor-modal #sh-photo-review-gallery .photo-item p {
+    font-size: 0.7em !important; /* Smaller text for modal */
+    margin: 1px 0 !important;
+}
+
 #service-history-editor-modal #sh-photo-review-gallery .photo-item label {
-    font-size: 0.7em; /* Smaller text for notes/labels in modal */
+    font-size: 0.75em !important; /* Smaller text for modal */
+    margin-top: 4px !important;
 }
 
 #service-history-editor-modal .form-group {

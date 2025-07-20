@@ -67,6 +67,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const shEditorContentTarget = document.getElementById('sh-editor-content-target');
     let serviceHistoryFormHTML = ''; // Cache for the form HTML
 
+    // Function to close modal properly - available globally
+    function closeModal() {
+        if (serviceHistoryEditorModal) serviceHistoryEditorModal.style.display = 'none';
+        if (shEditorContentTarget) shEditorContentTarget.innerHTML = '';
+        // Restore body scrolling
+        document.body.style.overflow = '';
+        console.log("DEBUG AP: Modal closed and body scroll restored");
+    }
+
     console.log("DEBUG: Element references obtained for admin.html.");
 
     let currentUser = null;
@@ -408,9 +417,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 minutes = parseInt(timeParts[1]);
             }
             
-            const serviceDate = new Date(Date.UTC(year, month, day, hours, minutes));
+            // Create date in local timezone (Cleveland/Eastern Time) instead of UTC
+            const serviceDate = new Date(year, month, day, hours, minutes);
 
             if (isNaN(serviceDate.getTime())) throw new Error("Invalid date or time format.");
+            
+            console.log(`DEBUG AP: Service scheduled for: ${serviceDate.toLocaleString()} (Local: ${serviceDate.toLocaleDateString()} ${serviceDate.toLocaleTimeString()})`);
             serviceDateTimestamp = firebase.firestore.Timestamp.fromDate(serviceDate);
 
         } catch (dateError) {
@@ -633,7 +645,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (serviceHistoryEditorModal) {
         serviceHistoryEditorModal.style.display = 'flex'; 
-        console.log("DEBUG AP: Modal display set to flex.");
+        // Scroll to top of page to ensure modal is visible
+        window.scrollTo(0, 0);
+        // Also ensure modal content starts at top
+        const modalContent = serviceHistoryEditorModal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.scrollTop = 0;
+        }
+        // Prevent body scrolling when modal is open
+        document.body.style.overflow = 'hidden';
+        console.log("DEBUG AP: Modal display set to flex and scrolled to top.");
     } else {
         console.error("DEBUG AP: serviceHistoryEditorModal IS NULL before setting display style! Cannot show modal.");
         return; 
@@ -658,8 +679,14 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log(`DEBUG AP: Attempting to populate service editor modal for service ID: ${serviceId}`);
    
     try {
+        // Wait a moment for DOM to be ready after form load
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         await window.ashFormHandler.handleEditServiceHistoryClick(serviceId);
         console.log("DEBUG AP: ashFormHandler.handleEditServiceHistoryClick completed for modal.");
+        
+        // Wait another moment for population to complete
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         if (shEditorContentTarget) {
             const formSectionInModal = shEditorContentTarget.querySelector('#add-edit-service-history-section');
@@ -670,6 +697,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 const actualForm = formSectionInModal.querySelector('#add-edit-service-history-form');
                 if (actualForm && window.ashFormHandler && typeof window.ashFormHandler.setFormDisabledState === 'function') {
                      window.ashFormHandler.setFormDisabledState(actualForm, false);
+                }
+
+                // Debug check: Verify if client and location dropdowns are populated and showing correct values
+                const clientSelect = formSectionInModal.querySelector('#sh-client-select');
+                const locationSelect = formSectionInModal.querySelector('#sh-location-select');
+                const serviceDateInput = formSectionInModal.querySelector('#sh-service-date');
+                
+                console.log("DEBUG AP: Modal form element check:");
+                console.log("- Client select options:", clientSelect ? clientSelect.options.length : 'not found');
+                console.log("- Client selected value:", clientSelect ? clientSelect.value : 'not found');
+                console.log("- Client selected text:", clientSelect ? clientSelect.options[clientSelect.selectedIndex]?.text : 'not found');
+                console.log("- Location select options:", locationSelect ? locationSelect.options.length : 'not found');
+                console.log("- Location selected value:", locationSelect ? locationSelect.value : 'not found');
+                console.log("- Location selected text:", locationSelect ? locationSelect.options[locationSelect.selectedIndex]?.text : 'not found');
+                console.log("- Service date value:", serviceDateInput ? serviceDateInput.value : 'not found');
+                
+                // Force UI refresh for dropdowns
+                if (clientSelect && clientSelect.value) {
+                    // Force the dropdown to display the selected option
+                    clientSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    console.log("DEBUG AP: Forced client dropdown refresh");
+                }
+                
+                if (locationSelect && locationSelect.value) {
+                    // Force the dropdown to display the selected option  
+                    locationSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    console.log("DEBUG AP: Forced location dropdown refresh");
                 }
             } else {
                 console.error("DEBUG AP: #add-edit-service-history-section not found within modal content after population.");
@@ -683,8 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
             newCancelButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 console.log("DEBUG AP: Modal cancel button clicked.");
-                if (serviceHistoryEditorModal) serviceHistoryEditorModal.style.display = 'none';
-                if (shEditorContentTarget) shEditorContentTarget.innerHTML = ''; 
+                closeModal();
             });
         } else {
             console.warn("DEBUG AP: Modal cancel button #cancel-add-edit-service-history-button not found after loading form.");
@@ -704,8 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (messageEl && messageEl.classList.contains('success')) {
                     console.log("DEBUG AP: Modal form save successful.");
                     setTimeout(async () => {
-                        if (serviceHistoryEditorModal) serviceHistoryEditorModal.style.display = 'none';
-                        if (shEditorContentTarget) shEditorContentTarget.innerHTML = '';
+                        closeModal();
                         await refreshDashboardLists(); 
                     }, 1500);
                 } else if (messageEl) {
@@ -899,12 +951,28 @@ document.addEventListener('DOMContentLoaded', function() {
                                 }
                             });
 
+                            // Modal close functionality already defined globally
+
                             if (closeSHEditorModalButton) {
-                                closeSHEditorModalButton.addEventListener('click', () => {
-                                    if (serviceHistoryEditorModal) serviceHistoryEditorModal.style.display = 'none';
-                                    if (shEditorContentTarget) shEditorContentTarget.innerHTML = ''; // Clear content to ensure clean slate next time
+                                closeSHEditorModalButton.addEventListener('click', closeModal);
+                            }
+
+                            // Close modal when clicking outside the modal content
+                            if (serviceHistoryEditorModal) {
+                                serviceHistoryEditorModal.addEventListener('click', (e) => {
+                                    // Only close if clicking the overlay itself, not the content
+                                    if (e.target === serviceHistoryEditorModal) {
+                                        closeModal();
+                                    }
                                 });
                             }
+
+                            // Close modal with ESC key
+                            document.addEventListener('keydown', (e) => {
+                                if (e.key === 'Escape' && serviceHistoryEditorModal && serviceHistoryEditorModal.style.display === 'flex') {
+                                    closeModal();
+                                }
+                            });
                             // --- END NEW MODAL EVENT LISTENERS ---
 
                             window.adminPortalModalListenersAttached = true; 

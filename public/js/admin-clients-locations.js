@@ -647,7 +647,7 @@ async function handleSaveLocationSubmit(e) {
     const serviceFrequency = document.getElementById('location-service-frequency').value || null;
     
     const nextServiceDateStr = document.getElementById('location-next-service-date').value; // YYYY-MM-DD
-    // const nextServiceTimeStr = document.getElementById('edit-location-nextServiceTime').value; // We are ignoring this for now
+    const nextServiceTimeStr = document.getElementById('edit-location-nextServiceTime').value; // Now using time field
 
     const lastServiceDateStr = document.getElementById('location-last-service-date').value;
 
@@ -666,27 +666,66 @@ async function handleSaveLocationSubmit(e) {
         return;
     }
 
-    // Use your existing robust function for date-only conversion (assumes it handles empty strings correctly)
+    // Convert date-only strings to timestamps (for last service date - read-only)
     const convertDateToTimestamp = (dateStr) => {
-        if (!dateStr) return null; // If no date string, return null
+        if (!dateStr) return null;
         try {
             const dateParts = dateStr.split('-'); // Expects YYYY-MM-DD
             if (dateParts.length === 3) {
-                // Create date in UTC to avoid timezone issues if dates are meant to be specific days
-                const utcDate = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
-                if (!isNaN(utcDate)) {
-                    return firebase.firestore.Timestamp.fromDate(utcDate);
+                // For date-only fields, store as local midnight to avoid timezone confusion
+                const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                if (!isNaN(localDate)) {
+                    return firebase.firestore.Timestamp.fromDate(localDate);
                 }
             }
             console.warn("Invalid date string format for timestamp conversion:", dateStr);
-            return null; // Return null if format is bad
+            return null;
         } catch (e) {
             console.error("Error converting date string to Firestore Timestamp:", e);
             return null;
         }
     };
 
-    const nextServiceDateTimestamp = convertDateToTimestamp(nextServiceDateStr);
+    // Convert date + time to timestamp with proper timezone handling (for next service date/time)
+    const convertDateTimeToTimestamp = (dateStr, timeStr) => {
+        if (!dateStr) return null;
+        try {
+            const dateParts = dateStr.split('-'); // Expects YYYY-MM-DD
+            if (dateParts.length === 3) {
+                let hours = 9; // Default to 9 AM if no time specified
+                let minutes = 0;
+                
+                if (timeStr && timeStr.trim()) {
+                    const timeParts = timeStr.split(':');
+                    if (timeParts.length >= 2) {
+                        hours = parseInt(timeParts[0]);
+                        minutes = parseInt(timeParts[1]);
+                    }
+                }
+                
+                // Create date in local timezone (Cleveland/Eastern Time)
+                const localDateTime = new Date(
+                    parseInt(dateParts[0]), 
+                    parseInt(dateParts[1]) - 1, 
+                    parseInt(dateParts[2]), 
+                    hours, 
+                    minutes
+                );
+                
+                if (!isNaN(localDateTime)) {
+                    console.log(`DEBUG ACL: Next service time created: ${localDateTime.toLocaleString()} (Local: ${localDateTime.toLocaleDateString()} ${localDateTime.toLocaleTimeString()})`);
+                    return firebase.firestore.Timestamp.fromDate(localDateTime);
+                }
+            }
+            console.warn("Invalid date/time format for timestamp conversion:", dateStr, timeStr);
+            return null;
+        } catch (e) {
+            console.error("Error converting date/time to Firestore Timestamp:", e);
+            return null;
+        }
+    };
+
+    const nextServiceDateTimestamp = convertDateTimeToTimestamp(nextServiceDateStr, nextServiceTimeStr);
     const lastServiceDateTimestamp = convertDateToTimestamp(lastServiceDateStr);
 
     const locationData = {
@@ -794,25 +833,48 @@ async function handleEditLocationClick(locationId) {
                 if (daysGroup) daysGroup.style.display = 'none';
             }
 
-            // Use your existing function for date-only display
+            // Format timestamp for date input (date-only fields like last service)
             const formatTimestampForDateInput = (timestamp) => {
                 if (timestamp && typeof timestamp.toDate === 'function') {
                     try {
                         const dateObj = timestamp.toDate(); 
-                        const year = dateObj.getUTCFullYear(); // Use UTC for consistency if saving as UTC midnight
-                        const month = (dateObj.getUTCMonth() + 1).toString().padStart(2, '0');
-                        const day = dateObj.getUTCDate().toString().padStart(2, '0');
+                        // Use local time for date display to match how it was stored
+                        const year = dateObj.getFullYear();
+                        const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                        const day = dateObj.getDate().toString().padStart(2, '0');
                         return `${year}-${month}-${day}`;
                     } catch (e) { console.error("Error formatting timestamp for date input:", e); return ''; }
                 }
                 return '';
             };
-            document.getElementById('location-next-service-date').value = formatTimestampForDateInput(locData.nextServiceDate);
             
-            // Clear the time input if it exists, as we are not using it for now
+            // Format timestamp for date and time inputs (next service date/time)
+            const formatTimestampForDateTimeInputs = (timestamp) => {
+                if (timestamp && typeof timestamp.toDate === 'function') {
+                    try {
+                        const dateObj = timestamp.toDate();
+                        const year = dateObj.getFullYear();
+                        const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                        const day = dateObj.getDate().toString().padStart(2, '0');
+                        const hours = dateObj.getHours().toString().padStart(2, '0');
+                        const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+                        return {
+                            date: `${year}-${month}-${day}`,
+                            time: `${hours}:${minutes}`
+                        };
+                    } catch (e) { console.error("Error formatting timestamp for date/time inputs:", e); return { date: '', time: '' }; }
+                }
+                return { date: '', time: '' };
+            };
+            
+            // Set next service date and time
+            const nextServiceDateTime = formatTimestampForDateTimeInputs(locData.nextServiceDate);
+            document.getElementById('location-next-service-date').value = nextServiceDateTime.date;
+            
             const nextServiceTimeInput = document.getElementById('edit-location-nextServiceTime');
             if (nextServiceTimeInput) {
-                nextServiceTimeInput.value = '';
+                nextServiceTimeInput.value = nextServiceDateTime.time;
+                console.log(`DEBUG ACL: Set next service time to: ${nextServiceDateTime.time} for date: ${nextServiceDateTime.date}`);
             }
             
             document.getElementById('location-last-service-date').value = formatTimestampForDateInput(locData.lastServiceDate); // Assuming this uses same format
@@ -1078,36 +1140,54 @@ async function handleEditLocationClick(locationId) {
 
         if (user) {
             console.log("DEBUG ACL: User is authenticated with UID:", user.uid);
-            console.log("DEBUG ACL: Attempting to fetch user role from Firestore for UID:", user.uid);
-
-            db.collection('users').doc(user.uid).get().then(docSnapshot => {
-                console.log("DEBUG ACL: Firestore role check. docSnapshot.exists:", docSnapshot.exists);
-                if (docSnapshot.exists) {
-                    console.log("DEBUG ACL: User document data from Firestore:", docSnapshot.data());
-                }
-
-                // Inside auth.onAuthStateChanged(user => { ... db.collection('users').doc(user.uid).get().then(docSnapshot => { ... })
-                if (docSnapshot.exists) {
-                    const userData = docSnapshot.data();
-                    // MODIFIED ROLE CHECK
-                    if (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'standard_admin') {
-                        console.log(`DEBUG ACL: Role '${userData.role}' grants access to Client/Location Page. Proceeding.`);
-                        showPageSection(null); 
-                        fetchAndDisplayClients();
-                        fetchAndDisplayAllLocations();
-                        setupClientLocationPageListeners();
-                    } else {
-                        console.error(`DEBUG ACL: Role '${userData.role}' does not grant access to Client/Location Page. Redirecting.`);
-                        redirectToLogin("Insufficient role for Client/Location page.");
-                    }
-                } else {
-                    console.error("DEBUG ACL: User document does NOT EXIST in 'users' collection for UID:", user.uid);
-                    redirectToLogin("User profile not found for Client/Location page.");
-                }
+            
+            user.getIdTokenResult().then(idTokenResult => {
+                const claims = idTokenResult.claims;
+                console.log("DEBUG ACL: User claims:", claims);
                 
+                // Attempt to get Firestore user document for role verification, but proceed if claims are sufficient
+                db.collection('users').doc(user.uid).get()
+                    .then(docSnapshot => {
+                        let userData = null;
+                        if (docSnapshot.exists) {
+                            userData = docSnapshot.data();
+                            console.log("DEBUG ACL: User document data from Firestore:", userData);
+                        } else {
+                            console.warn("DEBUG ACL: User document not found in Firestore for UID:", user.uid);
+                        }
+
+                        // Check for admin privileges based on claims OR Firestore role
+                        const isAdminByClaims = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
+                        const isAdminByRole = userData && (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'standard_admin');
+
+                        if (isAdminByClaims || isAdminByRole) {
+                            console.log("DEBUG ACL: Admin access confirmed for Client/Location Page.");
+                            showPageSection(null); 
+                            fetchAndDisplayClients();
+                            fetchAndDisplayAllLocations();
+                            setupClientLocationPageListeners();
+                        } else {
+                            console.error("DEBUG ACL: Access denied. User does not have sufficient admin claims or role. Redirecting.");
+                            redirectToLogin("Insufficient admin privileges for Client/Location page.");
+                        }
+                    })
+                    .catch(error => { 
+                        console.error("DEBUG ACL: Error fetching user data from Firestore:", error);
+                        // Allow access if claims are sufficient, even if Firestore doc fails, but log error
+                        const isAdminByClaimsOnly = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
+                        if(isAdminByClaimsOnly) {
+                            console.warn("DEBUG ACL: Proceeding with admin access based on claims despite Firestore user doc error.");
+                            showPageSection(null); 
+                            fetchAndDisplayClients();
+                            fetchAndDisplayAllLocations();
+                            setupClientLocationPageListeners();
+                        } else {
+                            redirectToLogin("Critical error during admin check or page setup for Client/Location page. Check console.");
+                        }
+                    });
             }).catch(error => {
-                console.error("DEBUG ACL: CRITICAL ERROR during admin check/page setup (from Firestore or subsequent function calls like setupListeners):", error);
-                redirectToLogin("Critical error during admin check or page setup for Client/Location page. Check console.");
+                console.error("DEBUG ACL: Error fetching ID token result:", error);
+                redirectToLogin("Failed to verify admin status. Access denied.");
             });
         } else {
             console.log("DEBUG ACL: No user signed in (user object is null). Preparing to redirect.");

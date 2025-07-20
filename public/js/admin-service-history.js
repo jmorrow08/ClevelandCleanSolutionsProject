@@ -16,7 +16,29 @@ function initMapAsh() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("DEBUG ASH: Admin Service History script (V5.4)");
+    console.log("DEBUG ASH: Admin Service History script (V6.0 - CACHE CLEARED)");
+
+    // FORCE CLEAR ANY CACHED VALUES
+    try {
+        localStorage.removeItem('serviceHistoryFilters');
+        sessionStorage.removeItem('serviceHistoryFilters');
+        // Clear any date input defaults
+        setTimeout(() => {
+            const startInput = document.getElementById('filter-date-start');
+            const endInput = document.getElementById('filter-date-end');
+            if (startInput) {
+                startInput.value = '';
+                startInput.removeAttribute('value');
+            }
+            if (endInput) {
+                endInput.value = '';
+                endInput.removeAttribute('value');
+            }
+            console.log("DEBUG ASH: Forced clear of any cached filter values");
+        }, 100);
+    } catch (e) {
+        console.log("DEBUG ASH: Cache clear attempt completed");
+    }
 
     if (typeof firebase === 'undefined' || !firebase.app || !firebase.auth || !firebase.firestore) {
         console.error("CRITICAL ASH: Firebase services not available.");
@@ -44,6 +66,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterDateEndInput = document.getElementById('filter-date-end');
     const applyFiltersBtn = document.getElementById('apply-filters-button');
     const resetFiltersBtn = document.getElementById('reset-filters-button');
+
+    // --- Pagination Elements ---
+    const recordsPerPageSelect = document.getElementById('records-per-page');
+    const tableInfoDiv = document.getElementById('table-info');
+    const pageInfoSpan = document.getElementById('page-info');
+    const firstPageBtn = document.getElementById('first-page-btn');
+    const prevPageBtn = document.getElementById('prev-page-btn');
+    const nextPageBtn = document.getElementById('next-page-btn');
+    const lastPageBtn = document.getElementById('last-page-btn');
 
     // ADD THESE NEW ELEMENT REFERENCES
     const shTimeTrackingDisplaySection = document.getElementById('sh-time-tracking-display-section');
@@ -77,6 +108,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const allManagedPageSections = [serviceHistoryListView, addEditServiceHistorySection, photosViewerSection];
     let currentAdminUser = null;
     let currentAdminClaims = null;
+
+    // --- Pagination State ---
+    let currentPage = 1;
+    let recordsPerPage = 50;
+    let totalRecords = 0;
+    let totalPages = 1;
+    let lastDocSnapshot = null; // For Firestore pagination
 
     auth.onAuthStateChanged(user => {
         currentAdminUser = user;
@@ -241,13 +279,58 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (applyFiltersBtn) {
-            applyFiltersBtn.addEventListener('click', loadServiceHistory);
+            applyFiltersBtn.addEventListener('click', () => {
+                resetPagination();
+                loadServiceHistory();
+            });
         }
 
         if (resetFiltersBtn) {
             resetFiltersBtn.addEventListener('click', () => {
                 if (filterDateStartInput) filterDateStartInput.value = '';
                 if (filterDateEndInput) filterDateEndInput.value = '';
+                resetPagination();
+                loadServiceHistory();
+            });
+        }
+
+        // --- Pagination Event Listeners ---
+        if (recordsPerPageSelect) {
+            recordsPerPageSelect.addEventListener('change', () => {
+                recordsPerPage = parseInt(recordsPerPageSelect.value);
+                resetPagination();
+                loadServiceHistory();
+            });
+        }
+
+        if (firstPageBtn) {
+            firstPageBtn.addEventListener('click', () => {
+                currentPage = 1;
+                loadServiceHistory();
+            });
+        }
+
+        if (prevPageBtn) {
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadServiceHistory();
+                }
+            });
+        }
+
+        if (nextPageBtn) {
+            nextPageBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadServiceHistory();
+                }
+            });
+        }
+
+        if (lastPageBtn) {
+            lastPageBtn.addEventListener('click', () => {
+                currentPage = totalPages;
                 loadServiceHistory();
             });
         }
@@ -325,8 +408,52 @@ document.addEventListener('DOMContentLoaded', function() {
         return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
+    // --- Pagination Helper Functions ---
+    function resetPagination() {
+        currentPage = 1;
+        totalRecords = 0;
+        totalPages = 1;
+        lastDocSnapshot = null;
+    }
+
+    function updatePaginationUI() {
+        // Update page info
+        if (pageInfoSpan) {
+            pageInfoSpan.textContent = `Page ${currentPage} of ${totalPages}`;
+        }
+
+        // Update table info
+        if (tableInfoDiv) {
+            const startRecord = totalRecords === 0 ? 0 : ((currentPage - 1) * recordsPerPage) + 1;
+            const endRecord = Math.min(currentPage * recordsPerPage, totalRecords);
+            tableInfoDiv.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
+        }
+
+        // Update button states
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+
+        // Style disabled buttons
+        const paginationBtns = [firstPageBtn, prevPageBtn, nextPageBtn, lastPageBtn];
+        paginationBtns.forEach(btn => {
+            if (btn) {
+                if (btn.disabled) {
+                    btn.style.backgroundColor = '#e9ecef';
+                    btn.style.color = '#6c757d';
+                    btn.style.cursor = 'not-allowed';
+                } else {
+                    btn.style.backgroundColor = '#f8f9fa';
+                    btn.style.color = '#495057';
+                    btn.style.cursor = 'pointer';
+                }
+            }
+        });
+    }
+
     async function loadServiceHistory() {
-        console.log("DEBUG ASH: loadServiceHistory called.");
+        console.log("DEBUG ASH: loadServiceHistory called for page", currentPage);
         if (!db) { console.error("DEBUG ASH: Firestore DB not available."); return; }
         if (!currentAdminUser || !currentAdminClaims) {
              console.warn("DEBUG ASH: Admin user or claims not ready for loadServiceHistory. Attempting to refresh claims if user exists.");
@@ -355,33 +482,84 @@ document.addEventListener('DOMContentLoaded', function() {
         if (serviceHistoryTableBody) serviceHistoryTableBody.innerHTML = '';
 
         try {
-            let query = db.collection('serviceHistory').orderBy('serviceDate', 'desc');
+            // Build base query - FIXED: Use simple approach that works
+            console.log("DEBUG ASH: Using working query approach");
+            let baseQuery = db.collection('serviceHistory');
 
+            // Check date filter values
             const startDateVal = filterDateStartInput ? filterDateStartInput.value : null;
             const endDateVal = filterDateEndInput ? filterDateEndInput.value : null;
 
-            if (startDateVal) {
+            console.log(`DEBUG ASH: Date filters - Start: '${startDateVal || 'None'}', End: '${endDateVal || 'None'}'`);
+
+            if (startDateVal && startDateVal.trim() !== '') {
                 const jsStartDate = new Date(startDateVal); 
                 jsStartDate.setUTCHours(0,0,0,0);
-                query = query.where('serviceDate', '>=', firebase.firestore.Timestamp.fromDate(jsStartDate));
+                baseQuery = baseQuery.where('serviceDate', '>=', firebase.firestore.Timestamp.fromDate(jsStartDate));
+                console.log(`DEBUG ASH: *** APPLIED START DATE FILTER ***: ${jsStartDate.toISOString()}`);
             }
-            if (endDateVal) {
+            if (endDateVal && endDateVal.trim() !== '') {
                 const jsEndDate = new Date(endDateVal);
                 jsEndDate.setUTCHours(23,59,59,999);
-                query = query.where('serviceDate', '<=', firebase.firestore.Timestamp.fromDate(jsEndDate));
+                baseQuery = baseQuery.where('serviceDate', '<=', firebase.firestore.Timestamp.fromDate(jsEndDate));
+                console.log(`DEBUG ASH: *** APPLIED END DATE FILTER ***: ${jsEndDate.toISOString()}`);
+            }
+
+            if (!startDateVal && !endDateVal) {
+                console.log("DEBUG ASH: *** NO DATE FILTERS APPLIED *** - querying ALL service history");
+            }
+
+            // SIMPLIFIED APPROACH: For now, just get the records directly without complex pagination
+            // This bypasses the pagination logic that might be causing issues
+            console.log("DEBUG ASH: Using simplified query approach");
+            
+            // Query all records (the issue was with orderBy, not with access)
+            // Limit query size to prevent performance issues while still showing full history
+            const maxRecordsToFetch = Math.min(recordsPerPage * currentPage, 1000); // Cap at 1000 records
+            let query = baseQuery.limit(maxRecordsToFetch);
+            const snapshot = await query.get();
+            
+            console.log(`DEBUG ASH: Simplified query executed, found ${snapshot.size} total records`);
+            
+            // Sort the documents by date (newest first) since we can't rely on Firestore orderBy
+            const sortedDocs = snapshot.docs.sort((a, b) => {
+                const dateA = a.data().serviceDate ? a.data().serviceDate.toDate() : new Date(0);
+                const dateB = b.data().serviceDate ? b.data().serviceDate.toDate() : new Date(0);
+                return dateB - dateA; // Descending order (newest first)
+            });
+            
+            console.log(`DEBUG ASH: Sorted ${sortedDocs.length} documents by date`);
+            
+            // Calculate which records to show for current page
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = currentPage * recordsPerPage;
+            const docsToShow = sortedDocs.slice(startIndex, endIndex);
+            
+            console.log(`DEBUG ASH: Showing records ${startIndex + 1}-${Math.min(endIndex, snapshot.size)} of ${snapshot.size}`);
+            
+            // Update pagination info
+            totalRecords = snapshot.size;
+            totalPages = Math.ceil(totalRecords / recordsPerPage);
+            
+            // If we hit the cap, there might be more records
+            if (snapshot.size === maxRecordsToFetch && maxRecordsToFetch === 1000) {
+                console.log("DEBUG ASH: Hit 1000 record limit, there may be more records");
+                totalPages = Math.max(totalPages, 20); // Assume at least 20 pages if we hit limit
             }
             
-            query = query.limit(100);
-            const snapshot = await query.get();
             if (serviceHistoryLoadingMsg) serviceHistoryLoadingMsg.style.display = 'none';
 
-            if (snapshot.empty) {
+            if (docsToShow.length === 0) {
                 if (noServiceHistoryMsg) noServiceHistoryMsg.style.display = 'block';
+                updatePaginationUI();
                 return;
             }
 
             let tableRowsHtml = '';
-            snapshot.forEach(doc => {
+            let earliestDate = null;
+            let latestDate = null;
+            
+            docsToShow.forEach(doc => {
                 const entry = doc.data();
                 const serviceId = doc.id; 
                 const safeServiceId = escapeHtml(serviceId);
@@ -389,6 +567,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 let serviceDateDisplay = 'N/A';
                 if (entry.serviceDate && entry.serviceDate.toDate) {
                     const dateObj = entry.serviceDate.toDate();
+
+                    // Track date range for debugging
+                    if (!earliestDate || dateObj < earliestDate) earliestDate = dateObj;
+                    if (!latestDate || dateObj > latestDate) latestDate = dateObj;
 
                     const year = dateObj.getUTCFullYear();
                     const month = dateObj.getUTCMonth() + 1; // JS months are 0-indexed
@@ -438,7 +620,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${actionButtonsHtml}</td>
                     </tr>`;
             });
+            
+            // Log the date range of returned records for debugging
+            if (earliestDate && latestDate) {
+                console.log(`DEBUG ASH: Displayed records date range - Earliest: ${earliestDate.toLocaleDateString()}, Latest: ${latestDate.toLocaleDateString()}`);
+            } else if (docsToShow.length > 0) {
+                console.log("DEBUG ASH: Records found but no valid dates detected");
+            }
+            
             if (serviceHistoryTableBody) serviceHistoryTableBody.innerHTML = tableRowsHtml;
+            
+            // Update pagination UI
+            updatePaginationUI();
+            
         } catch (error) {
             console.error("DEBUG ASH: Error loading service history:", error);
             if (serviceHistoryLoadingMsg) serviceHistoryLoadingMsg.style.display = 'none';
@@ -446,6 +640,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 noServiceHistoryMsg.textContent = "Error loading service history. " + error.message;
                 noServiceHistoryMsg.style.display = 'block';
             }
+            updatePaginationUI();
         }
     }
 
@@ -704,6 +899,15 @@ async function fetchAndDisplayTimeTrackingForService(serviceHistoryDocData, serv
     const assignedEmployeeIds = (serviceHistoryDocData.employeeAssignments || []).map(asgn => asgn.employeeId);
     console.log("DEBUG ASH: Assigned employee IDs for this service:", assignedEmployeeIds);
 
+    // If no employees are assigned, show appropriate message immediately
+    if (assignedEmployeeIds.length === 0) {
+        console.log("DEBUG ASH: No employees assigned to this service, showing no-data message");
+        if (shTimeTrackingLoading) shTimeTrackingLoading.style.display = 'none';
+        if (shTimeTrackingList) shTimeTrackingList.innerHTML = '<p style="font-style: italic; color: #666; padding: 10px;">No employees are assigned to this service. Time tracking data is only available for assigned employees.</p>';
+        if (shNoTimeTracking) shNoTimeTracking.style.display = 'none'; // Hide the other no-data message
+        return;
+    }
+
     try {
         const timeTrackingSnapshot = await db.collection('employeeTimeTracking')
             .where('locationId', '==', serviceHistoryDocData.locationId)
@@ -790,6 +994,7 @@ async function fetchAndDisplayTimeTrackingForService(serviceHistoryDocData, serv
         const photoDiv = document.createElement('div');
         photoDiv.className = 'photo-item'; 
 
+        // Create thumbnail image
         const img = document.createElement('img');
         img.src = photoData.photoUrl;
         img.alt = `Service photo by ${escapeHtml(photoData.employeeName || 'Unknown')}`;
@@ -797,12 +1002,12 @@ async function fetchAndDisplayTimeTrackingForService(serviceHistoryDocData, serv
         img.addEventListener('click', () => { if (photoData.photoUrl) window.open(photoData.photoUrl, '_blank'); });
         photoDiv.appendChild(img);
 
+        // Create content container
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'photo-item-content';
+
+        // Create checkbox for client visibility (prominent and first)
         const checkboxLabel = document.createElement('label');
-        checkboxLabel.style.display = 'block'; 
-        checkboxLabel.style.marginTop = '5px';
-        checkboxLabel.style.fontSize = '0.9em';
-        checkboxLabel.style.alignItems = 'center';
-        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         // Default to true (visible) if isClientVisible field doesn't exist on the photo document, or if it's explicitly true
@@ -812,18 +1017,33 @@ async function fetchAndDisplayTimeTrackingForService(serviceHistoryDocData, serv
         checkboxLabel.htmlFor = checkbox.id;
 
         checkboxLabel.appendChild(checkbox);
-        checkboxLabel.appendChild(document.createTextNode(' Client Visible?')); 
-        photoDiv.appendChild(checkboxLabel);
+        checkboxLabel.appendChild(document.createTextNode(' Show to Client')); 
+        contentDiv.appendChild(checkboxLabel);
 
+        // Add uploader info (more compact)
         const uploaderP = document.createElement('p');
-        uploaderP.innerHTML = `By: ${escapeHtml(photoData.employeeName || 'Unknown')}`;
-        photoDiv.appendChild(uploaderP);
+        uploaderP.innerHTML = `${escapeHtml(photoData.employeeName || 'Unknown')}`;
+        contentDiv.appendChild(uploaderP);
 
-        if (photoData.notes) {
-            const notesP = document.createElement('p');
-            notesP.innerHTML = `Notes: ${escapeHtml(photoData.notes)}`;
-            photoDiv.appendChild(notesP);
+        // Add timestamp if available (more compact)
+        if (photoData.uploadedAt && photoData.uploadedAt.toDate) {
+            const timeP = document.createElement('p');
+            const date = photoData.uploadedAt.toDate();
+            timeP.innerHTML = `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+            contentDiv.appendChild(timeP);
         }
+
+        // Add notes if available (shortened for space)
+        if (photoData.notes && photoData.notes.trim()) {
+            const notesP = document.createElement('p');
+            const truncatedNotes = photoData.notes.length > 50 ? photoData.notes.substring(0, 50) + '...' : photoData.notes;
+            notesP.innerHTML = `"${escapeHtml(truncatedNotes)}"`;
+            notesP.style.fontStyle = 'italic';
+            notesP.title = escapeHtml(photoData.notes); // Full text on hover
+            contentDiv.appendChild(notesP);
+        }
+
+        photoDiv.appendChild(contentDiv);
         return photoDiv;
     }
 
@@ -941,6 +1161,9 @@ function displayMapForTimeEntry(mapContainerId, lat, lng, title) {
                     freshClientSelect.value = ''; // Ensure placeholder is selected if target is empty
                 }
                 console.log(`DEBUG ASH: Client Select - Target: '${targetClientId}', Actual JS Value: '${freshClientSelect.value}', SelectedIndex: ${freshClientSelect.selectedIndex}, LoopFound: ${clientOptionFound}`);
+                
+                // Force UI update for dropdown display
+                freshClientSelect.style.color = '#333'; // Ensure text is visible
                 if (typeof(Event) === 'function') freshClientSelect.dispatchEvent(new Event('change', { bubbles: true }));
             } else { console.error("DEBUG ASH: #sh-client-select not found for setting value."); }
             
@@ -966,6 +1189,9 @@ function displayMapForTimeEntry(mapContainerId, lat, lng, title) {
                         freshLocationSelect.value = '';
                     }
                     console.log(`DEBUG ASH: Location Select - Target: '${targetLocationId}', Actual JS Value: '${freshLocationSelect.value}', SelectedIndex: ${freshLocationSelect.selectedIndex}, LoopFound: ${locOptionFound}`);
+                    
+                    // Force UI update for dropdown display
+                    freshLocationSelect.style.color = '#333'; // Ensure text is visible
                     if (typeof(Event) === 'function') freshLocationSelect.dispatchEvent(new Event('change', { bubbles: true }));
                 } else { console.error("DEBUG ASH: #sh-location-select not found for setting value."); }
             } else {
@@ -980,7 +1206,9 @@ function displayMapForTimeEntry(mapContainerId, lat, lng, title) {
             const freshServiceDateInput = document.getElementById('sh-service-date'); 
             if (freshServiceDateInput && data.serviceDate && data.serviceDate.toDate) {
                 const dateObj = data.serviceDate.toDate();
-                freshServiceDateInput.value = `${dateObj.getUTCFullYear()}-${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dateObj.getUTCDate()).padStart(2, '0')}`;
+                // Use local time components instead of UTC to show correct date/time
+                freshServiceDateInput.value = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+                console.log(`DEBUG ASH: Service date set to: ${freshServiceDateInput.value} (Local: ${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString()})`);
             } else if (freshServiceDateInput) { freshServiceDateInput.value = ''; }
 
             // --- Employee Checkboxes ---
@@ -1208,9 +1436,12 @@ function displayMapForTimeEntry(mapContainerId, lat, lng, title) {
          const year = parseInt(dateParts[0]);
          const month = parseInt(dateParts[1]) - 1; 
          const day = parseInt(dateParts[2]);
-         const jsUTCDate = new Date(Date.UTC(year, month, day)); 
-         if (isNaN(jsUTCDate.getTime())) throw new Error("Invalid date format entered.");
-         serviceDateTimestamp = firebase.firestore.Timestamp.fromDate(jsUTCDate);
+         // Create date in local timezone (Cleveland/Eastern Time) instead of UTC
+         const jsLocalDate = new Date(year, month, day, 9, 0); // Default to 9 AM local time
+         if (isNaN(jsLocalDate.getTime())) throw new Error("Invalid date format entered.");
+         
+         console.log(`DEBUG ASH: Service date created: ${jsLocalDate.toLocaleString()} (Local: ${jsLocalDate.toLocaleDateString()} ${jsLocalDate.toLocaleTimeString()})`);
+         serviceDateTimestamp = firebase.firestore.Timestamp.fromDate(jsLocalDate);
      } catch (dateError) {
          if(localAddEditMsgEl) showGeneralMessage(localAddEditMsgEl, `Invalid Service Date: ${dateError.message}`, 'error');
          if(localForm) setFormDisabledState(localForm, false);

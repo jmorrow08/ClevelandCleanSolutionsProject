@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard - Cleveland Clean Solutions</title>
+    <link rel="stylesheet" href="css/tailwind.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons for modern interface -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <style>
+        /* --- CSS v4 - Cleaner & Refined --- */
+        #ccs-portal-v4-container {
+            max-width: 850px;
+            margin: 40px auto;
+            padding: 20px;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; /* Common clean font stack */
+            color: #333;
+            background-color: #f9f9f9;
+            line-height: 1.6;
+            box-sizing: border-box;
+        }
+
+        .ccs-status-msg { text-align: center; padding: 40px; color: #666; font-size: 1.1em; }
+        .ccs-status-msg.ccs-error { color: #D8000C; background-color: #FFD2D2; border: 1px solid #D8000C; border-radius: 5px; }
+        .ccs-loading-sub { font-style: italic; color: #666; margin-top: 15px; display: block; font-size: 0.95em; }
+        .ccs-no-data-msg { color: #666; margin-top: 15px; font-size: 0.95em; }
+
+        .ccs-message-v4 { /* For form messages */
+            font-size: 0.9em; margin-top: 15px; padding: 10px 15px; border-radius: 4px;
+            border-width: 1px; border-style: solid;
+        }
+        .ccs-message-v4.ccs-error { color: #D8000C; background-color: #FFD2D2; border-color: #D8000C; }
+        .ccs-message-v4.ccs-success { color: #4F8A10; background-color: #DFF2BF; border-color: #4F8A10; }
+
+        .ccs-header-v4 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #00B2B2; /* Teal border */
+        }
+        .ccs-title-v4 { margin: 0; font-size: 2em; font-weight: 300; /* Lighter weight */ color: #333; }
+        .ccs-usermenu-v4 { display: flex; align-items: center; gap: 20px; font-size: 0.95em; color: #555; }
+
+        .ccs-card-v4 {
+            background-color: #ffffff;
+            padding: 25px 35px; /* Adjusted padding */
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        .ccs-card-title-v4 {
+            margin-top: 0; margin-bottom: 25px; font-size: 1.5em; font-weight: 400; color: #00B2B2; /* Teal */
+            padding-bottom: 10px; border-bottom: 1px solid #eee;
+        }
+
+        /* Profile Display */
+        .ccs-profile-item-v4 { margin-bottom: 15px; font-size: 1em; display: flex; flex-wrap: wrap; }
+        .ccs-label-v4 { font-weight: 600; color: #444; width: 150px; /* Fixed width for alignment */ flex-shrink: 0; margin-right: 10px; }
+        #ccs-profile-view-v4 span + span { color: #555; } /* Value text color */
+
+        /* Forms & Filters */
+        .ccs-form-title-v4 { font-size: 1.2em; font-weight: 500; margin-bottom: 20px; color: #333; }
+        .ccs-form-group-v4 { margin-bottom: 20px; }
+        .ccs-form-group-v4 label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9em; color: #555; }
+        .ccs-input-v4, .ccs-select-v4 { /* Apply consistent styling to inputs and selects */
+            display: block; width: 100%; max-width: 450px; padding: 10px 12px; border: 1px solid #ccc;
+            border-radius: 4px; box-sizing: border-box; font-size: 1em; background-color: #fff;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+         .ccs-select-v4 { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23333333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7em top 50%; background-size: 0.9em auto; padding-right: 2.5em; /* Make space for arrow */ }
+        .ccs-input-v4:focus, .ccs-select-v4:focus { border-color: #00B2B2; box-shadow: 0 0 0 2px rgba(0, 178, 178, 0.2); outline: none; }
+        .ccs-form-note-v4 { font-size: 0.85em; color: #777; margin: -10px 0 20px 0; }
+        .ccs-filter-container-v4 { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed #eee; } /* Container for filter */
+
+        /* Buttons */
+        .ccs-button-group-v4 { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 12px; }
+        .ccs-button-v4 {
+            padding: 10px 22px; font-size: 0.95em; cursor: pointer; border-radius: 5px;
+            border: 1px solid transparent; font-weight: 500; text-align: center;
+            transition: all 0.2s ease;
+            line-height: 1.5; /* Ensure text vertical align */
+        }
+        .ccs-button-v4:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .ccs-button-v4:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Default Button Style */
+        .ccs-button-v4 { background-color: #e9ecef; border-color: #ced4da; color: #495057; }
+        .ccs-button-v4:hover:not(:disabled) { background-color: #dee2e6; border-color: #adb5bd; }
+
+        /* Primary (Teal) */
+        .ccs-button-primary-v4 { background-color: #00B2B2; border-color: #00B2B2; color: white; }
+        .ccs-button-primary-v4:hover:not(:disabled) { background-color: #008a8a; border-color: #008080; }
+
+        /* Secondary (Grey) */
+        .ccs-button-secondary-v4 { background-color: #6c757d; border-color: #6c757d; color: white; }
+        .ccs-button-secondary-v4:hover:not(:disabled) { background-color: #5a6268; border-color: #545b62; }
+
+        /* Danger (Red) */
+        .ccs-button-danger-v4 { background-color: #dc3545; border-color: #dc3545; color: white; }
+        .ccs-button-danger-v4:hover:not(:disabled) { background-color: #c82333; border-color: #bd2130; }
+
+        /* --- Styles for Locations, History, Photos --- */
+        .ccs-list-container-v4 { margin-top: 15px; }
+        .ccs-list-item-v4 {
+            border-bottom: 1px solid #eee;
+            padding: 12px 0;
+        }
+        .ccs-list-item-v4:last-child { border-bottom: none; }
+        .ccs-list-item-v4 p { margin: 2px 0; font-size: 0.95em; }
+        .ccs-list-item-v4 strong { color: #333; min-width: 100px; display: inline-block; }
+        .ccs-list-item-v4 .ccs-item-notes-v4 { font-size: 0.9em; color: #555; margin-top: 5px; }
+        .ccs-list-item-v4 .ccs-item-meta-v4 { font-size: 0.85em; color: #777; }
+
+        /* Photo List Specific */
+        #ccs-photos-list-v4 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px; /* Spacing between photos */
+            margin-top: 15px;
+        }
+        .ccs-photo-item-v4 {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+            width: 180px; /* Adjust width as needed */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .ccs-photo-item-v4 img {
+            max-width: 100%;
+            height: 120px; /* Fixed height */
+            object-fit: cover; /* Crop image nicely */
+            display: block;
+            margin-bottom: 8px;
+            border-radius: 3px;
+            cursor: pointer; /* Indicate clickable */
+        }
+        .ccs-photo-item-v4 p {
+            font-size: 0.8em;
+            margin: 3px 0;
+            color: #555;
+            line-height: 1.3;
+        }
+         .ccs-photo-item-v4 strong { min-width: 0; display: inline; color:#333; } /* Adjust bold text */
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #ccs-portal-v4-container { margin: 20px auto; padding: 15px; }
+            .ccs-header-v4 { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .ccs-title-v4 { font-size: 1.6em; }
+            .ccs-card-v4 { padding: 20px; }
+            .ccs-label-v4 { width: 120px; margin-bottom: 5px; } /* Adjust label width */
+            .ccs-profile-item-v4 { flex-direction: column; align-items: flex-start; } /* Stack label/value */
+            .ccs-select-v4 { max-width: 100%; } /* Allow select to take full width */
+        }
+        @media (max-width: 480px) {
+            .ccs-button-group-v4 { flex-direction: column; }
+            .ccs-button-v4 { width: 100%; }
+            .ccs-usermenu-v4 { flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; }
+            .ccs-label-v4 { width: auto; } /* Let label take full width */
+            .ccs-photo-item-v4 { width: calc(50% - 10px); } /* Two photos per row on small screens */
+        }
+         @media (max-width: 380px) {
+            .ccs-photo-item-v4 { width: 100%; } /* One photo per row on very small screens */
+         }
+    </style>
+</head>
+<body class="min-h-screen bg-background font-sans">
+
+<div id="ccs-portal-v4-container" class="max-w-4xl mx-auto p-6">
+    <p id="ccs-loading-v4" class="ccs-status-msg">Loading your portal...</p>
+    <p id="ccs-error-v4" class="ccs-status-msg ccs-error" style="display: none;"></p>
+
+    <div id="ccs-dashboard-v4" style="display: none;">
+
+        <div class="ccs-header-v4">
+            <h1 class="ccs-title-v4">Client Dashboard</h1>
+            <div class="ccs-usermenu-v4">
+                <span id="ccs-welcome-v4">Welcome!</span>
+                <button id="ccs-logout-v4" class="ccs-button-v4 ccs-button-danger-v4">Logout</button>
+            </div>
+        </div>
+
+        <div class="ccs-card-v4">
+             <h2 class="ccs-card-title-v4">My Profile</h2>
+             <div id="ccs-profile-view-v4">
+                 <div class="ccs-profile-item-v4"> <span class="ccs-label-v4">Company Name:</span> <span id="ccs-display-company-v4"></span> </div>
+                 <div class="ccs-profile-item-v4"> <span class="ccs-label-v4">Contact Name:</span> <span id="ccs-display-name-v4"></span> </div>
+                 <div class="ccs-profile-item-v4"> <span class="ccs-label-v4">Phone Number:</span> <span id="ccs-display-phone-v4"></span> </div>
+                 <div class="ccs-profile-item-v4"> <span class="ccs-label-v4">Email Address:</span> <span id="ccs-display-email-v4"></span> </div>
+                 <div class="ccs-button-group-v4"> <button id="ccs-show-edit-btn-v4" class="ccs-button-v4">Edit Profile</button> <button id="ccs-show-password-btn-v4" class="ccs-button-v4 ccs-button-secondary-v4">Change Password</button> </div>
+             </div>
+             <div id="ccs-profile-edit-v4" style="display: none;">
+                 <h3 class="ccs-form-title-v4">Edit Profile Details</h3>
+                 <div class="ccs-form-group-v4"> <label for="ccs-edit-name-input-v4">Contact Name:</label> <input type="text" id="ccs-edit-name-input-v4" class="ccs-input-v4"> </div>
+                 <div class="ccs-form-group-v4"> <label for="ccs-edit-phone-input-v4">Phone Number:</label> <input type="tel" id="ccs-edit-phone-input-v4" class="ccs-input-v4"> </div>
+                 <p class="ccs-form-note-v4"><i>Company Name & Email cannot be changed here.</i></p>
+                 <div class="ccs-button-group-v4"> <button id="ccs-save-profile-btn-v4" class="ccs-button-v4 ccs-button-primary-v4">Save Changes</button> <button id="ccs-cancel-edit-btn-v4" class="ccs-button-v4 ccs-button-secondary-v4">Cancel</button> </div>
+                 <p id="ccs-edit-profile-msg-v4" class="ccs-message-v4" style="display: none;"></p>
+             </div>
+             <div id="ccs-password-edit-v4" style="display: none;">
+                 <h3 class="ccs-form-title-v4">Change Your Password</h3>
+                 <p class="ccs-form-note-v4"><i>Requires your current password for verification.</i></p>
+                 <form id="ccs-change-password-form-v4">
+                     <div class="ccs-form-group-v4"> <label for="ccs-current-password-input-v4">Current Password:</label> <input type="password" id="ccs-current-password-input-v4" required class="ccs-input-v4"> </div>
+                     <div class="ccs-form-group-v4"> <label for="ccs-new-password-input-v4">New Password (min. 6 chars):</label> <input type="password" id="ccs-new-password-input-v4" required class="ccs-input-v4" minlength="6"> </div>
+                     <div class="ccs-form-group-v4"> <label for="ccs-confirm-password-input-v4">Confirm New Password:</label> <input type="password" id="ccs-confirm-password-input-v4" required class="ccs-input-v4" minlength="6"> </div>
+                     <div class="ccs-button-group-v4"> <button type="submit" class="ccs-button-v4 ccs-button-primary-v4">Update Password</button> <button type="button" id="ccs-cancel-password-btn-v4" class="ccs-button-v4 ccs-button-secondary-v4">Cancel</button> </div>
+                 </form>
+                 <p id="ccs-change-password-msg-v4" class="ccs-message-v4" style="display: none;"></p>
+             </div>
+        </div>
+
+        <div class="ccs-card-v4">
+            <h2 class="ccs-card-title-v4">My Active Locations</h2>
+            <p id="ccs-locations-loading-v4" class="ccs-loading-sub">Loading locations...</p>
+            <div id="ccs-locations-list-v4" class="ccs-list-container-v4" style="display: none;">
+                 </div>
+            <p id="ccs-no-locations-msg-v4" class="ccs-no-data-msg" style="display: none;">No active locations found.</p>
+        </div>
+
+        <div class="ccs-filter-container-v4">
+            <div class="ccs-form-group-v4">
+                <label for="ccs-location-filter-v4">Filter by Location:</label>
+                <select id="ccs-location-filter-v4" class="ccs-select-v4" disabled>
+                    <option value="">-- Loading Locations --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ccs-card-v4">
+            <h2 class="ccs-card-title-v4">Recent Service History</h2>
+             <p id="ccs-history-loading-v4" class="ccs-loading-sub">Loading history...</p>
+            <div id="ccs-history-list-v4" class="ccs-list-container-v4" style="display: none;">
+                 </div>
+            <p id="ccs-no-history-msg-v4" class="ccs-no-data-msg" style="display: none;">No recent service history found.</p>
+        </div>
+
+        <div class="ccs-card-v4">
+            <h2 class="ccs-card-title-v4">Recent Service Photos</h2>
+            <p id="ccs-photos-loading-v4" class="ccs-loading-sub">Loading photos...</p>
+            <div id="ccs-photos-list-v4" style="display: none;"> </div>
+             <p id="ccs-no-photos-msg-v4" class="ccs-no-data-msg" style="display: none;">No recent photos found for your locations.</p>
+             <p id="ccs-photos-limit-msg-v4" class="ccs-no-data-msg" style="display: none;">Photo search unavailable due to the number of locations.</p>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyAJEuOcNLg8dYtzhMEyhMZtidfIXNALcgU",
+        authDomain: "cleveland-clean-portal.firebaseapp.com",
+        projectId: "cleveland-clean-portal",
+        storageBucket: "cleveland-clean-portal.firebasestorage.app",
+        messagingSenderId: "938625547862",
+        appId: "1:938625547862:web:3655b2b380b858702705f7",
+        measurementId: "G-7KZMMKZ1XW"
+    };
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    } else {
+        firebase.app(); 
+    }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DEBUG: Client Dashboard v10 Phase 1.2 (Filter) DOM Loaded"); // Version updated
+
+    // --- Initial Firebase Check ---
+    if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined' || typeof firebase.firestore === 'undefined') {
+        console.error("FATAL: Firebase SDK not loaded/initialized correctly. Check Header Code Injection.");
+        const loadingMsg = document.getElementById('ccs-loading-v4');
+        const errorMsg = document.getElementById('ccs-error-v4');
+        if (loadingMsg) loadingMsg.style.display = 'none';
+        if (errorMsg) {
+            errorMsg.textContent = "Error: Cannot connect to portal services. Please contact support.";
+            errorMsg.style.display = 'block';
+        }
+        return; // Stop execution
+    }
+    // --- End Firebase Check ---
+
+    // --- Get Elements (Using v4 IDs) ---
+    const loadingMessageEl = document.getElementById('ccs-loading-v4');
+    const errorMessageEl = document.getElementById('ccs-error-v4'); // Page level error
+    const dashboardContentEl = document.getElementById('ccs-dashboard-v4');
+
+    // Profile Elements
+    const welcomeMessageEl = document.getElementById('ccs-welcome-v4');
+    const displayCompanyEl = document.getElementById('ccs-display-company-v4');
+    const displayNameEl = document.getElementById('ccs-display-name-v4');
+    const displayPhoneEl = document.getElementById('ccs-display-phone-v4');
+    const displayEmailEl = document.getElementById('ccs-display-email-v4');
+    const profileViewEl = document.getElementById('ccs-profile-view-v4');
+    const showEditFormBtn = document.getElementById('ccs-show-edit-btn-v4');
+    const profileEditEl = document.getElementById('ccs-profile-edit-v4');
+    const editNameInput = document.getElementById('ccs-edit-name-input-v4');
+    const editPhoneInput = document.getElementById('ccs-edit-phone-input-v4');
+    const saveProfileBtn = document.getElementById('ccs-save-profile-btn-v4'); // Keep this one
+    const cancelEditBtn = document.getElementById('ccs-cancel-edit-btn-v4');
+    const editProfileMsgEl = document.getElementById('ccs-edit-profile-msg-v4');
+
+    // Password Elements
+    const showPasswordFormBtn = document.getElementById('ccs-show-password-btn-v4');
+    const passwordEditEl = document.getElementById('ccs-password-edit-v4');
+    const changePasswordFormEl = document.getElementById('ccs-change-password-form-v4'); // Keep this one
+    const currentPasswordInputEl = document.getElementById('ccs-current-password-input-v4');
+    const newPasswordInputEl = document.getElementById('ccs-new-password-input-v4');
+    const confirmPasswordInputEl = document.getElementById('ccs-confirm-password-input-v4');
+    const cancelPasswordBtn = document.getElementById('ccs-cancel-password-btn-v4');
+    const changePasswordMsgEl = document.getElementById('ccs-change-password-msg-v4');
+
+    // Logout Button
+    const logoutBtn = document.getElementById('ccs-logout-v4');
+
+    // Data Display Elements
+    const locationsLoadingEl = document.getElementById('ccs-locations-loading-v4');
+    const locationsListEl = document.getElementById('ccs-locations-list-v4');
+    const noLocationsMsgEl = document.getElementById('ccs-no-locations-msg-v4');
+
+    const historyLoadingEl = document.getElementById('ccs-history-loading-v4');
+    const historyListEl = document.getElementById('ccs-history-list-v4');
+    const noHistoryMsgEl = document.getElementById('ccs-no-history-msg-v4');
+
+    const photosLoadingEl = document.getElementById('ccs-photos-loading-v4');
+    const photosListEl = document.getElementById('ccs-photos-list-v4');
+    const noPhotosMsgEl = document.getElementById('ccs-no-photos-msg-v4');
+    const photosLimitMsgEl = document.getElementById('ccs-photos-limit-msg-v4');
+
+    // *** NEW: Filter Element ***
+    const locationFilterSelect = document.getElementById('ccs-location-filter-v4');
+
+    // --- Firebase Instances ---
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
+
+    // --- State Variables ---
+    let currentUser = null;
+    let currentClientProfileId = null;
+    let currentProfileData = {};
+    let clientLocationIds = [];
+    let clientLocationsMap = {};
+
+    // --- Utility Functions (Unchanged) ---
+    function showMessage(element, message, isError = false) {
+        if (!element) { console.warn("Attempted to show message on null element:", element); return; }
+        element.textContent = message;
+        element.className = isError ? 'ccs-message-v4 ccs-error' : 'ccs-message-v4 ccs-success';
+        element.style.display = message ? 'block' : 'none';
+    }
+    function setPageError(message) {
+        console.error("DEBUG: Page Error - ", message);
+        if (errorMessageEl) {
+            errorMessageEl.textContent = `Error: ${message}. Please refresh or contact support.`;
+            errorMessageEl.style.display = 'block';
+        }
+        if (loadingMessageEl) loadingMessageEl.style.display = 'none';
+        if (dashboardContentEl) dashboardContentEl.style.display = 'none';
+    }
+    function formatFirestoreTimestamp(timestamp, options) {
+        if (!timestamp || typeof timestamp.toDate !== 'function') {
+             if (timestamp instanceof Date) { try { const defaultOptions = { year: 'numeric', month: 'short', day: 'numeric' }; return timestamp.toLocaleDateString(undefined, options || defaultOptions); } catch(e){ return 'Invalid Date Obj';} }
+            return null;
+        }
+        try { const date = timestamp.toDate(); const defaultOptions = { year: 'numeric', month: 'short', day: 'numeric' }; return date.toLocaleDateString(undefined, options || defaultOptions); } catch (e) { console.error("Error formatting timestamp:", timestamp, e); return 'Date Error'; }
+    }
+     function escapeHtml(unsafe) { if (typeof unsafe !== 'string') return ''; return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+
+    function populateUI(profileData, userEmail) {
+        if (!profileData) { console.warn("PopulateUI called with no profile data"); return; }
+        console.log("DEBUG: Populating UI with data:", profileData);
+        const name = profileData.contactName || 'Client';
+        if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome, ${escapeHtml(name)}!`;
+        if (displayCompanyEl) displayCompanyEl.textContent = escapeHtml(profileData.companyName || 'N/A');
+        if (displayNameEl) displayNameEl.textContent = escapeHtml(profileData.contactName || 'N/A');
+        if (displayPhoneEl) displayPhoneEl.textContent = escapeHtml(profileData.phone || 'N/A');
+        if (displayEmailEl) displayEmailEl.textContent = escapeHtml(userEmail || 'N/A');
+        if (profileEditEl && profileEditEl.style.display === 'block') { if (editNameInput) editNameInput.value = profileData.contactName || ''; if (editPhoneInput) editPhoneInput.value = profileData.phone || ''; }
+    }
+
+    // --- Data Fetching Functions ---
+
+    // --- fetchAndDisplayClientLocations (MODIFIED to populate filter) ---
+    async function fetchAndDisplayClientLocations(clientId) {
+        // Reset states
+        locationsLoadingEl.style.display = 'block';
+        locationsListEl.style.display = 'none';
+        noLocationsMsgEl.style.display = 'none';
+        locationsListEl.innerHTML = '';
+        clientLocationIds = [];
+        clientLocationsMap = {};
+        locationFilterSelect.innerHTML = '<option value="">-- Loading Locations --</option>'; // Update placeholder
+        locationFilterSelect.disabled = true;
+
+
+        if (!clientId) {
+            console.warn("DEBUG: fetchAndDisplayClientLocations called without clientId.");
+            locationsLoadingEl.style.display = 'none';
+            noLocationsMsgEl.style.display = 'block';
+             locationFilterSelect.innerHTML = '<option value="">No Locations Found</option>'; // Update filter msg
+            fetchAndDisplayServiceHistory(null);
+            fetchAndDisplayRecentPhotos([]);
+            return;
+        }
+        console.log("DEBUG: Fetching locations for client:", clientId);
+
+        try {
+            const snapshot = await db.collection('locations')
+                .where('clientProfileId', '==', clientId)
+                .where('status', '==', true)
+                .orderBy('locationName', 'asc')
+                .get();
+
+            let locationsHtml = '';
+            let filterOptionsHtml = '<option value="">All Locations</option>'; // Start filter options
+
+            if (snapshot.empty) {
+                noLocationsMsgEl.style.display = 'block';
+                 filterOptionsHtml = '<option value="">No Locations Found</option>'; // Update filter if none found
+            } else {
+                snapshot.forEach(doc => {
+                    const loc = doc.data();
+                    const locId = doc.id;
+                    clientLocationIds.push(locId);
+
+                    const locationName = loc.locationName || 'Unnamed Location';
+                    clientLocationsMap[locId] = locationName; // Populate map
+
+                    const address = loc.address ? `${loc.address.street || ''}, ${loc.address.city || ''}, ${loc.address.state || ''} ${loc.address.zip || ''}` : 'Address not available';
+
+                    // Build locations list HTML
+                    locationsHtml += `
+                        <div class="ccs-list-item-v4">
+                            <p><strong>Name:</strong> ${escapeHtml(locationName)}</p>
+                            <p><strong style="min-width: 100px;">Address:</strong> ${escapeHtml(address)}</p>
+                        </div>`;
+
+                    // Build filter options HTML
+                    filterOptionsHtml += `<option value="${locId}">${escapeHtml(locationName)}</option>`;
+                });
+                locationsListEl.innerHTML = locationsHtml;
+                locationsListEl.style.display = 'block';
+                locationFilterSelect.disabled = false; // Enable filter
+            }
+            console.log("DEBUG: Found active location IDs:", clientLocationIds);
+            console.log("DEBUG: Location Map populated:", clientLocationsMap);
+
+            locationFilterSelect.innerHTML = filterOptionsHtml; // Populate filter dropdown
+
+        } catch (error) {
+            console.error("Error fetching locations:", error);
+            noLocationsMsgEl.textContent = 'Error loading locations.';
+            noLocationsMsgEl.style.display = 'block';
+            locationFilterSelect.innerHTML = '<option value="">Error Loading</option>'; // Indicate error in filter
+            clientLocationIds = [];
+            clientLocationsMap = {};
+        } finally {
+            locationsLoadingEl.style.display = 'none';
+            // --- Trigger initial history and photo fetch AFTER locations/filter are processed ---
+            // Fetch for "All Locations" initially (empty selectedLocationId)
+            fetchAndDisplayServiceHistory(clientId, '');
+            fetchAndDisplayRecentPhotos(clientLocationIds, '');
+            // --- ---
+        }
+    }
+
+
+// --- Client Profile Edit Save Handler ---
+async function handleSaveClientProfile() {
+    console.log("DEBUG: Save Client Profile button clicked.");
+    // Ensure currentUser, currentClientProfileId, db, serverTimestamp are accessible globally
+    if (!currentUser || !currentClientProfileId || !db || !serverTimestamp) {
+        showMessage(editProfileMsgEl, "Error: Not logged in or connection issue.", true);
+        return;
+    }
+    // Get references to form elements (using variables declared at top)
+    // No need to re-get them here
+
+    const newName = editNameInput.value.trim();
+    const newPhone = editPhoneInput.value.trim();
+
+    if (!newName) {
+        showMessage(editProfileMsgEl, "Contact Name cannot be empty.", true);
+        return;
+    }
+
+    // Disable buttons
+    if(saveProfileBtn) saveProfileBtn.disabled = true; saveProfileBtn.textContent = 'Saving...';
+    if(cancelEditBtn) cancelEditBtn.disabled = true;
+    showMessage(editProfileMsgEl, "Saving...", false); // Use 'info' style if available
+
+    try {
+        const profileRef = db.collection("clientMasterList").doc(currentClientProfileId);
+        const updateData = {
+            contactName: newName,
+            phone: newPhone,
+            updatedAt: serverTimestamp()
+        };
+
+        await profileRef.update(updateData);
+        console.log("DEBUG: Client profile updated successfully in Firestore.");
+
+        // Update local cache and UI
+        currentProfileData.contactName = newName;
+        currentProfileData.phone = newPhone;
+        populateUI(currentProfileData, currentUser.email); // Re-populate display fields
+
+        showMessage(editProfileMsgEl, "Profile updated successfully!", false);
+
+        // Hide edit form, show view form after delay
+        setTimeout(() => {
+             if (profileEditEl) profileEditEl.style.display = 'none';
+             if (profileViewEl) profileViewEl.style.display = 'block';
+             showMessage(editProfileMsgEl, "", false); // Clear message
+        }, 1500);
+
+    } catch (error) {
+        console.error("DEBUG: Error updating client profile:", error);
+         let msg = `Error saving profile: ${error.message}`;
+         if (error.code === 'permission-denied') {
+             msg = "Error saving profile: Permission denied. Check Firestore rules.";
+         }
+         showMessage(editProfileMsgEl, msg, true);
+         // Re-enable buttons on error
+         if(saveProfileBtn) saveProfileBtn.textContent = 'Save Changes'; saveProfileBtn.disabled = false;
+         if(cancelEditBtn) cancelEditBtn.disabled = false;
+    }
+}
+
+// --- Client Change Password Submit Handler ---
+async function handleChangeClientPassword(e) {
+    e.preventDefault();
+     // Ensure currentUser and auth are accessible globally
+    if (!currentUser || !auth) {
+        showMessage(changePasswordMsgEl, "Error: Not logged in or connection issue.", true);
+        return;
+    }
+     // Get references to form elements (using variables declared at top)
+     // No need to re-get them here
+
+
+    const currentPassword = currentPasswordInputEl.value;
+    const newPassword = newPasswordInputEl.value;
+    const confirmPassword = confirmPasswordInputEl.value;
+
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) { return showMessage(changePasswordMsgEl, "Please fill in all password fields.", true); }
+    if (newPassword.length < 6) { return showMessage(changePasswordMsgEl, "New password must be at least 6 characters.", true); }
+    if (newPassword !== confirmPassword) { return showMessage(changePasswordMsgEl, "New passwords do not match.", true); }
+
+    // Disable form
+    const submitBtn = changePasswordFormEl.querySelector('button[type="submit"]');
+    if (submitBtn) { submitBtn.textContent = 'Updating...'; submitBtn.disabled = true; }
+    if (cancelPasswordBtn) cancelPasswordBtn.disabled = true;
+    showMessage(changePasswordMsgEl, "Processing...", false); // Use 'info'
+
+    try {
+        // Re-authenticate
+        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, currentPassword);
+        await currentUser.reauthenticateWithCredential(credential);
+        console.log("DEBUG: Client re-authentication successful.");
+
+        // Update password
+        await currentUser.updatePassword(newPassword);
+        console.log("DEBUG: Client password update successful.");
+
+        showMessage(changePasswordMsgEl, "Password updated successfully!", false);
+        changePasswordFormEl.reset();
+
+        // Hide form and show profile view after success
+        setTimeout(() => {
+             if (passwordEditEl) passwordEditEl.style.display = 'none';
+             if (profileViewEl) profileViewEl.style.display = 'block';
+             showMessage(changePasswordMsgEl, "", false);
+        }, 2500);
+
+    } catch (error) {
+        console.error("DEBUG: Client password change error:", error);
+        let msg = "Error changing password.";
+        if (error.code === 'auth/wrong-password') { msg = "Incorrect current password."; }
+        else if (error.code === 'auth/weak-password') { msg = "New password is too weak."; }
+        else if (error.code === 'auth/too-many-requests') { msg = "Too many attempts. Try again later."; }
+        else { msg = `Error: ${error.message || 'Unknown error.'}`; }
+        showMessage(changePasswordMsgEl, msg, true);
+         // Re-enable buttons immediately on error
+         if (submitBtn) { submitBtn.textContent = 'Update Password'; submitBtn.disabled = false; }
+         if (cancelPasswordBtn) cancelPasswordBtn.disabled = false;
+    }
+}
+
+
+    // --- fetchAndDisplayServiceHistory (MODIFIED to accept filter) ---
+    async function fetchAndDisplayServiceHistory(clientId, selectedLocationId = '') { // Added selectedLocationId parameter
+        historyLoadingEl.style.display = 'block';
+        historyListEl.style.display = 'none';
+        noHistoryMsgEl.style.display = 'none';
+        historyListEl.innerHTML = ''; // Clear previous
+
+        if (!clientId) {
+            historyLoadingEl.style.display = 'none';
+            noHistoryMsgEl.style.display = 'block';
+            return;
+        }
+        console.log(`DEBUG: Fetching service history for client: ${clientId}, Location Filter: '${selectedLocationId || 'All'}'`);
+
+        try {
+            // Build query dynamically
+            let query = db.collection('serviceHistory').where('clientProfileId', '==', clientId);
+
+            if (selectedLocationId) { // Apply location filter if selected
+                query = query.where('locationId', '==', selectedLocationId);
+            }
+
+            query = query.orderBy('serviceDate', 'desc').limit(20); // Add sorting and limit
+
+            const snapshot = await query.get(); // Execute the built query
+
+            if (snapshot.empty) {
+                 // Adjust no history message based on filter
+                 noHistoryMsgEl.textContent = selectedLocationId
+                     ? "No recent service history found for this location."
+                     : "No recent service history found.";
+                noHistoryMsgEl.style.display = 'block';
+            } else {
+                let historyHtml = '';
+                snapshot.forEach(doc => {
+                    const job = doc.data();
+                    const formattedDate = formatFirestoreTimestamp(job.serviceDate);
+                    const locationName = clientLocationsMap[job.locationId] || (job.locationId ? `Unknown [ID: ...${job.locationId.slice(-4)}]` : 'N/A');
+                    const serviceType = job.serviceType || 'General Service';
+                    const notes = job.serviceNotes || job.notes || '';
+
+                    historyHtml += `
+                        <div class="ccs-list-item-v4">
+                            <p><strong style="min-width: 100px;">Date:</strong> ${formattedDate || 'N/A'}</p>
+                            <p><strong>Location:</strong> ${escapeHtml(locationName)}</p>
+                            <p><strong>Service:</strong> ${escapeHtml(serviceType)}</p>
+                            ${notes ? `<p class="ccs-item-notes-v4"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+                        </div>`;
+                });
+                historyListEl.innerHTML = historyHtml;
+                historyListEl.style.display = 'block';
+            }
+        } catch (error) {
+            console.error("Error fetching service history:", error);
+            historyListEl.innerHTML = '<p class="ccs-message-v4 ccs-error">Error loading service history.</p>';
+            historyListEl.style.display = 'block';
+        } finally {
+            historyLoadingEl.style.display = 'none';
+        }
+    }
+
+
+    // --- fetchAndDisplayRecentPhotos (MODIFIED to accept filter) ---
+    async function fetchAndDisplayRecentPhotos(allLocationIds, selectedLocationId = '') { // Added selectedLocationId parameter
+        photosLoadingEl.style.display = 'block';
+        photosListEl.style.display = 'none';
+        noPhotosMsgEl.style.display = 'none';
+        photosLimitMsgEl.style.display = 'none';
+        photosListEl.innerHTML = '';
+
+        let query; // Declare query variable
+
+        if (selectedLocationId) {
+            // Filter by a specific location
+             console.log("DEBUG: Fetching photos for selected location ID:", selectedLocationId);
+             query = db.collection('servicePhotos')
+                     .where('locationId', '==', selectedLocationId);
+        } else {
+            // Filter by "All Locations" using 'in' query
+             console.log("DEBUG: Fetching photos for all location IDs:", allLocationIds);
+            if (!allLocationIds || allLocationIds.length === 0) {
+                console.log("DEBUG: No location IDs provided for 'All Locations' photo fetch.");
+                noPhotosMsgEl.style.display = 'block';
+                photosLoadingEl.style.display = 'none';
+                return;
+            }
+            if (allLocationIds.length > 30) {
+                console.warn(`DEBUG: Cannot query photos for 'All Locations'; too many location IDs (${allLocationIds.length}). Limit is 30.`);
+                photosLimitMsgEl.style.display = 'block';
+                photosLoadingEl.style.display = 'none';
+                return; // Stop if too many locations for 'in' query
+            }
+             query = db.collection('servicePhotos')
+                     .where('locationId', 'in', allLocationIds);
+        }
+
+        // Apply sorting and limit to the constructed query
+        query = query.orderBy('uploadedAt', 'desc').limit(20);
+
+        try {
+            const snapshot = await query.get();
+
+            if (snapshot.empty) {
+                 // Adjust no photos message based on filter
+                 noPhotosMsgEl.textContent = selectedLocationId
+                     ? "No recent photos found for this location."
+                     : "No recent photos found for your locations.";
+                noPhotosMsgEl.style.display = 'block';
+            } else {
+                let photosHtml = '';
+                snapshot.forEach(doc => {
+                    const photo = doc.data();
+                    const photoUrl = photo.photoUrl;
+                    const thumbUrl = photo.thumbnailUrl || photo.photoUrl;
+                    const uploadDate = formatFirestoreTimestamp(photo.uploadedAt, { month: 'short', day: 'numeric', year: 'numeric' });
+                    // Use map for name consistency, fallback to stored name or ID
+                    const locationName = clientLocationsMap[photo.locationId] || photo.locationName || `Unknown [ID: ...${photo.locationId ? photo.locationId.slice(-4) : ''}]`;
+
+                    if(thumbUrl) {
+                         photosHtml += `
+                             <div class="ccs-photo-item-v4">
+                                 <img src="${escapeHtml(thumbUrl)}" alt="Service photo for ${escapeHtml(locationName)}" loading="lazy" onclick="window.open('${escapeHtml(photoUrl)}', '_blank')">
+                                 <p>${escapeHtml(locationName)}</p>
+                                 <p class="ccs-item-meta-v4">${uploadDate || 'N/A'}</p>
+                             </div>`;
+                    }
+                });
+                photosListEl.innerHTML = photosHtml;
+                photosListEl.style.display = 'flex';
+            }
+        } catch (error) {
+            console.error("Error fetching service photos:", error);
+            photosListEl.innerHTML = '<p class="ccs-message-v4 ccs-error">Error loading photos.</p>';
+             photosListEl.style.display = 'block';
+        } finally {
+            photosLoadingEl.style.display = 'none';
+        }
+    }
+
+
+    // --- Main Authentication Logic ---
+    auth.onAuthStateChanged(async (user) => {
+        if (errorMessageEl) { errorMessageEl.textContent = ''; errorMessageEl.style.display = 'none'; }
+
+        if (user) {
+            currentUser = user;
+            console.log("DEBUG: User logged in:", currentUser.uid);
+            if (loadingMessageEl) loadingMessageEl.style.display = 'block';
+            if (dashboardContentEl) dashboardContentEl.style.display = 'none';
+
+            try {
+                const userDocRef = db.collection("users").doc(currentUser.uid);
+                const userDoc = await userDocRef.get();
+                if (!userDoc.exists) throw new Error("User data record not found.");
+
+                const userData = userDoc.data();
+                const userRole = userData.role;
+                currentClientProfileId = userData.profileId;
+                console.log(`DEBUG: Role: ${userRole}, Profile ID: ${currentClientProfileId}`);
+
+                if (userRole !== 'client') {
+                    console.warn("DEBUG: User role is not 'client'. Signing out.");
+                    await auth.signOut(); window.location.href = '/'; return;
+                }
+                if (!currentClientProfileId) throw new Error("Client profile ID is missing from user record.");
+
+                const profileDocRef = db.collection("clientMasterList").doc(currentClientProfileId);
+                const profileDoc = await profileDocRef.get();
+                if (!profileDoc.exists) throw new Error("Client profile details not found.");
+                currentProfileData = profileDoc.data();
+
+                populateUI(currentProfileData, currentUser.email);
+
+                // Fetch Locations (which populates filter and then triggers initial History/Photos fetch)
+                fetchAndDisplayClientLocations(currentClientProfileId);
+
+                if (dashboardContentEl) dashboardContentEl.style.display = 'block';
+
+            } catch (error) {
+                setPageError(error.message);
+            } finally {
+                if (loadingMessageEl) loadingMessageEl.style.display = 'none';
+            }
+        } else {
+            // User is logged out
+            currentUser = null; currentClientProfileId = null; currentProfileData = {}; clientLocationIds = []; clientLocationsMap = {};
+            console.log("DEBUG: No user logged in. Redirecting to login.");
+             if (loadingMessageEl) loadingMessageEl.style.display = 'none';
+             if (dashboardContentEl) dashboardContentEl.style.display = 'none';
+             if (errorMessageEl) errorMessageEl.style.display = 'none';
+            window.location.href = '/';
+        }
+    });
+
+    // --- Event Listeners ---
+
+    // Profile Edit/Password Show/Hide/Cancel Buttons
+    if (showEditFormBtn) { showEditFormBtn.addEventListener('click', () => { if (profileViewEl) profileViewEl.style.display = 'none'; if (passwordEditEl) passwordEditEl.style.display = 'none'; if (profileEditEl) profileEditEl.style.display = 'block'; if (editProfileMsgEl) { editProfileMsgEl.textContent = ''; editProfileMsgEl.style.display = 'none'; } if (changePasswordMsgEl) { changePasswordMsgEl.textContent = ''; changePasswordMsgEl.style.display = 'none'; } if (editNameInput) editNameInput.value = currentProfileData.contactName || ''; if (editPhoneInput) editPhoneInput.value = currentProfileData.phone || ''; }); } else { console.warn("DEBUG: Edit profile button not found"); }
+    if (cancelEditBtn) { cancelEditBtn.addEventListener('click', () => { if (profileEditEl) profileEditEl.style.display = 'none'; if (profileViewEl) profileViewEl.style.display = 'block'; }); } else { console.warn("DEBUG: Cancel edit button not found"); }
+    if (showPasswordFormBtn) { showPasswordFormBtn.addEventListener('click', () => { if (profileEditEl) profileEditEl.style.display = 'none'; if (profileViewEl) profileViewEl.style.display = 'none'; if (passwordEditEl) passwordEditEl.style.display = 'block'; if (editProfileMsgEl) { editProfileMsgEl.textContent = ''; editProfileMsgEl.style.display = 'none'; } if (changePasswordMsgEl) { changePasswordMsgEl.textContent = ''; changePasswordMsgEl.style.display = 'none'; } if (changePasswordFormEl) changePasswordFormEl.reset(); }); } else { console.warn("DEBUG: Show password button not found"); }
+    if (cancelPasswordBtn) { cancelPasswordBtn.addEventListener('click', () => { if (passwordEditEl) passwordEditEl.style.display = 'none'; if (profileViewEl) profileViewEl.style.display = 'block'; }); } else { console.warn("DEBUG: Cancel password button not found"); }
+
+    // Attach Save Profile and Change Password Handlers
+    if (saveProfileBtn) {
+        console.log("DEBUG: Attaching listener for Save Profile button");
+        saveProfileBtn.addEventListener('click', handleSaveClientProfile); // Attach named function
+    } else { console.warn("DEBUG: Save Profile button not found for listener."); }
+
+    if (changePasswordFormEl) {
+        console.log("DEBUG: Attaching listener for Change Password form");
+        changePasswordFormEl.addEventListener('submit', handleChangeClientPassword); // Attach named function
+    } else { console.warn("DEBUG: Change Password form not found for listener."); }
+
+
+    // *** NEW: Location Filter Listener ***
+    if (locationFilterSelect) {
+        locationFilterSelect.addEventListener('change', () => {
+            if (!currentUser || !currentClientProfileId) {
+                console.warn("DEBUG: Filter changed but user/profileId not ready.");
+                return;
+            }
+            const selectedValue = locationFilterSelect.value;
+            console.log(`DEBUG: Location filter changed to: '${selectedValue || 'All'}'`);
+
+            // Show loading states while filtering
+            if(historyLoadingEl) historyLoadingEl.style.display = 'block';
+            if(historyListEl) historyListEl.style.display = 'none'; // Hide list while loading
+            if(photosLoadingEl) photosLoadingEl.style.display = 'block';
+            if(photosListEl) photosListEl.style.display = 'none'; // Hide list while loading
+
+            // Re-fetch data with the selected filter value
+            fetchAndDisplayServiceHistory(currentClientProfileId, selectedValue);
+            fetchAndDisplayRecentPhotos(clientLocationIds, selectedValue); // Pass original list of IDs and the selected one
+        });
+    } else { console.warn("DEBUG: Location filter select element not found"); }
+
+
+    // Logout Listener (Unchanged)
+    if (logoutBtn) { logoutBtn.addEventListener('click', () => { if (dashboardContentEl) dashboardContentEl.style.display = 'none'; if (errorMessageEl) { showMessage(errorMessageEl, "Logging out...", false); errorMessageEl.style.display = 'block'; } else if (loadingMessageEl) { loadingMessageEl.textContent = "Logging out..."; loadingMessageEl.style.display = 'block'; } auth.signOut().then(() => { console.log('DEBUG: Logout successful.'); window.location.href = '/'; }).catch((error) => { console.error('DEBUG: Logout error:', error); setPageError(`Logout failed: ${error.message}`); }); }); } else { console.warn("DEBUG: Logout button not found"); }
+
+}); // End DOMContentLoaded
+
+// Initialize Lucide icons when page loads
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>
+
+</body>
+</html> 

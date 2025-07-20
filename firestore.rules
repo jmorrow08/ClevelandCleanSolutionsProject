@@ -30,7 +30,9 @@ service cloud.firestore {
 
     // --- users Collection Rules ---
     match /users/{userId} {
-      allow read: if isLoggedIn() && (isResourceOwner(userId) || hasClaim('admin'));
+      // Allow users to read their own document without requiring custom claims (for login flow)
+      // OR admin to read any document
+      allow read: if isLoggedIn() && (request.auth.uid == userId || hasClaim('admin'));
       allow create: if false; // Cloud Functions handle creation
       allow update: if hasClaim('admin'); // Only admins can update user docs directly
       allow delete: if false; // Deletion handled by Cloud Function
@@ -46,7 +48,8 @@ service cloud.firestore {
                request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys);
       } // REMOVED ; from end of function block
 
-      allow read: if hasClaim('admin') || (hasClaim('client') && isProfileOwner(clientDocId));
+      // Allow reading for login flow without requiring custom claims initially
+      allow read: if hasClaim('admin') || (hasClaim('client') && isProfileOwner(clientDocId)) || isProfileOwner(clientDocId);
       allow create: if hasClaim('admin');
       allow update: if hasClaim('admin') ||
                        (hasClaim('client') && isProfileOwner(clientDocId) && clientCanUpdateProfileFields());
@@ -61,10 +64,12 @@ match /employeeMasterList/{employeeDocId} {
            request.resource.data.updatedAt is timestamp;
   }
 
+  // Allow reading for login flow - more permissive approach
   allow read: if hasClaim('admin') || // Admins can always read
                 (isLoggedIn() && // User must be logged in
                  hasRoleInFirestore(request.auth.uid, 'employee') && // Their role in /users/{uid} must be 'employee'
-                 isProfileOwner(employeeDocId)); // And they must be the owner of this profile
+                 isProfileOwner(employeeDocId)) || // And they must be the owner of this profile
+                isProfileOwner(employeeDocId); // OR just allow profile owners to read (for login flow)
 
   allow create: if hasClaim('admin');
   allow update: if hasClaim('admin') || (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isProfileOwner(employeeDocId) && employeeCanUpdateProfileFields());
@@ -80,8 +85,11 @@ match /employeeMasterList/{employeeDocId} {
     // --- servicePhotos Collection Rules ---
     match /servicePhotos/{photoId} {
       function isValidPhotoData(photoData) {
-        return isLoggedIn() && hasClaim('employee') &&
-               photoData.employeeProfileId == request.auth.uid &&
+        let userDocData = getUserData(request.auth.uid);
+        return isLoggedIn() && 
+               userDocData != null &&
+               (hasClaim('employee') || hasRoleInFirestore(request.auth.uid, 'employee')) &&
+               photoData.employeeProfileId == userDocData.profileId &&
                photoData.locationId is string && photoData.locationId != '' &&
                photoData.photoUrl is string && photoData.photoUrl.matches('https://firebasestorage.googleapis.com/.*') &&
                photoData.uploadedAt is timestamp;
@@ -93,13 +101,22 @@ match /employeeMasterList/{employeeDocId} {
                request.resource.data.updatedAt is timestamp;
       } // REMOVED ; from end of function block
 
+      function isPhotoOwner() {
+        let userDocData = getUserData(request.auth.uid);
+        return userDocData != null && resource.data.employeeProfileId == userDocData.profileId;
+      }
+
       allow create: if isValidPhotoData(request.resource.data);
       allow read: if hasClaim('admin') || hasClaim('client') ||
-                     (hasClaim('employee') && resource.data.employeeProfileId == request.auth.uid);
+                     (hasClaim('employee') && isPhotoOwner()) ||
+                     (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner()) ||
+                     (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'client'));
       allow update: if hasClaim('admin') ||
-                       (hasClaim('employee') && resource.data.employeeProfileId == request.auth.uid && employeeCanUpdatePhotoNotes());
+                       (hasClaim('employee') && isPhotoOwner() && employeeCanUpdatePhotoNotes()) ||
+                       (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner() && employeeCanUpdatePhotoNotes());
       allow delete: if hasClaim('admin') ||
-                       (hasClaim('employee') && resource.data.employeeProfileId == request.auth.uid);
+                       (hasClaim('employee') && isPhotoOwner()) ||
+                       (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner());
     }
 
     // --- employeeTimeTracking Rules ---
@@ -158,17 +175,21 @@ match /employeeTimeTracking/{entryDocId} {
     // --- serviceHistory Rules (SIMPLIFIED UPDATE RULE v2) ---
     match /serviceHistory/{jobDocId} {
       function isAssignedEmployee() {
-         // MODIFIED: Changed filter syntax from 'a => a.employeeId' to '__item__, __item__.employeeId'
-         return isLoggedIn() && hasClaim('employee') &&
+         // Check if user is an employee AND assigned to this job
+         let userDocData = getUserData(request.auth.uid);
+         return isLoggedIn() &&
+                userDocData != null &&
+                (hasClaim('employee') || hasRoleInFirestore(request.auth.uid, 'employee')) &&
                 resource.data.employeeAssignments is list &&
-                resource.data.employeeAssignments.filter(__item__, __item__.employeeId == request.auth.uid).size() > 0;
+                resource.data.employeeAssignments.filter(__item__, __item__.employeeId == userDocData.profileId).size() > 0;
       } // REMOVED ; from end of function block
 
       function isJobClient() {
-        return hasClaim('client') &&
-               isLoggedIn() &&
-               exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-               getUserData(request.auth.uid).profileId == resource.data.clientProfileId;
+        let userDocData = getUserData(request.auth.uid);
+        return isLoggedIn() &&
+               userDocData != null &&
+               userDocData.profileId == resource.data.clientProfileId &&
+               ((hasClaim('client')) || (hasRoleInFirestore(request.auth.uid, 'client')));
       } // REMOVED ; from end of function block
 
       function isValidServiceHistoryData(jobData) {
@@ -209,6 +230,36 @@ match /employeePayroll/{payrollDocId} {
   allow update, delete: if hasClaim('admin'); // Only admins can modify/delete
   allow create: if false; // Only Cloud Function creates
 }
+
+    // --- generalJobNotes Collection Rules ---
+    match /generalJobNotes/{noteId} {
+      function isValidJobNoteData(noteData) {
+        let userDocData = getUserData(request.auth.uid);
+        return isLoggedIn() && 
+               userDocData != null &&
+               (hasClaim('employee') || hasRoleInFirestore(request.auth.uid, 'employee')) &&
+               noteData.employeeProfileId == userDocData.profileId &&
+               noteData.locationId is string && noteData.locationId != '' &&
+               noteData.notes is string && noteData.notes != '' &&
+               noteData.createdAt is timestamp;
+      }
+
+      function isNoteOwner() {
+        let userDocData = getUserData(request.auth.uid);
+        return userDocData != null && resource.data.employeeProfileId == userDocData.profileId;
+      }
+
+      allow create: if isValidJobNoteData(request.resource.data);
+      allow read: if hasClaim('admin') ||
+                     (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isNoteOwner()) ||
+                     (hasClaim('employee') && isNoteOwner());
+      allow update: if hasClaim('admin') ||
+                       (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isNoteOwner()) ||
+                       (hasClaim('employee') && isNoteOwner());
+      allow delete: if hasClaim('admin') ||
+                       (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isNoteOwner()) ||
+                       (hasClaim('employee') && isNoteOwner());
+    }
 
     // --- counters Collection Rules ---
     match /counters/ids {

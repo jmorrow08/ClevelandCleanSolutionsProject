@@ -127,36 +127,66 @@ document.addEventListener('DOMContentLoaded', function() {
     auth.onAuthStateChanged(user => {
         currentAdminUser = user;
         if (user) {
-            db.collection('users').doc(user.uid).get().then(docSnapshot => {
-                if (docSnapshot.exists) {
-                    const userData = docSnapshot.data();
-                    // MODIFIED ROLE CHECK
-                    if (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'standard_admin') {
-                        console.log(`DEBUG AEMP: Role '${userData.role}' grants access. Initializing employee management page.`);
-                        // Check for super_admin claim to show/hide role management section
-                        user.getIdTokenResult().then((idTokenResult) => {
-                            const claims = idTokenResult.claims;
-                            console.log("DEBUG AEMP: User Claims:", claims);
+            user.getIdTokenResult().then(idTokenResult => {
+                const claims = idTokenResult.claims;
+                console.log("DEBUG AEMP: User claims:", claims);
+                
+                // Attempt to get Firestore user document for role verification, but proceed if claims are sufficient
+                db.collection('users').doc(user.uid).get()
+                    .then(docSnapshot => {
+                        let userData = null;
+                        if (docSnapshot.exists) {
+                            userData = docSnapshot.data();
+                            console.log("DEBUG AEMP: User document data from Firestore:", userData);
+                        } else {
+                            console.warn("DEBUG AEMP: User document not found in Firestore for UID:", user.uid);
+                        }
+
+                        // Check for admin privileges based on claims OR Firestore role
+                        const isAdminByClaims = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
+                        const isAdminByRole = userData && (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'standard_admin');
+
+                        if (isAdminByClaims || isAdminByRole) {
+                            console.log("DEBUG AEMP: Admin access confirmed for Employee Management Page.");
+                            
+                            // Store claims on currentAdminUser for later use and show role management if super_admin
                             if (claims.super_admin === true) {
-                                currentAdminUser.claims = claims; // Store claims on currentAdminUser for later use
+                                currentAdminUser.claims = claims;
                                 const roleMgmtSection = document.getElementById('user-role-management-section');
                                 if (roleMgmtSection) roleMgmtSection.style.display = 'block';
                             }
-                        });
-                        setupEventListeners();
-                        fetchAndDisplayEmployees(); 
-                        showPageSection(employeeMainView); 
-                    } else {
-                        console.error(`DEBUG AEMP: Role '${userData.role}' does not grant access. Redirecting.`);
-                        window.location.href = 'index.html';
-                    }
-                } else {
-                    console.error("DEBUG AEMP: User document not found. Redirecting.");
-                    window.location.href = 'index.html';
-                }
-
+                            
+                            setupEventListeners();
+                            fetchAndDisplayEmployees(); 
+                            showPageSection(employeeMainView);
+                        } else {
+                            console.error("DEBUG AEMP: Access denied. User does not have sufficient admin claims or role. Redirecting.");
+                            window.location.href = 'index.html';
+                        }
+                    })
+                    .catch(error => { 
+                        console.error("DEBUG AEMP: Error fetching user data from Firestore:", error);
+                        // Allow access if claims are sufficient, even if Firestore doc fails, but log error
+                        const isAdminByClaimsOnly = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
+                        if(isAdminByClaimsOnly) {
+                            console.warn("DEBUG AEMP: Proceeding with admin access based on claims despite Firestore user doc error.");
+                            
+                            // Store claims and show role management if super_admin
+                            if (claims.super_admin === true) {
+                                currentAdminUser.claims = claims;
+                                const roleMgmtSection = document.getElementById('user-role-management-section');
+                                if (roleMgmtSection) roleMgmtSection.style.display = 'block';
+                            }
+                            
+                            setupEventListeners();
+                            fetchAndDisplayEmployees(); 
+                            showPageSection(employeeMainView);
+                        } else {
+                            window.location.href = 'index.html';
+                        }
+                    });
             }).catch(error => {
-                console.error("DEBUG AEMP: Error fetching user role:", error);
+                console.error("DEBUG AEMP: Error fetching ID token result:", error);
                 window.location.href = 'index.html';
             });
         } else {

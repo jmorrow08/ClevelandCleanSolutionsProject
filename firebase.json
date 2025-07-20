@@ -46,6 +46,10 @@
         "destination": "/employee/index.html"
       },
       {
+        "source": "/client",
+        "destination": "/client.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

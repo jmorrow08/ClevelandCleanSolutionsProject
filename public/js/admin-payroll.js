@@ -372,28 +372,52 @@ document.addEventListener('DOMContentLoaded', function() {
         currentUser = user;
         if (user) {
             console.log("DEBUG: Admin Payroll Page - User authenticated:", user.uid);
-            db.collection('users').doc(user.uid).get().then(docSnapshot => {
-                if (docSnapshot.exists) { // First check if doc exists
-                    const userData = docSnapshot.data();
-                    // === THIS IS THE ONLY MODIFIED LINE (plus the surrounding structure for userData) ===
-                    if (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'standard_admin') {
-                    // ==============================================================================
-                        console.log(`DEBUG APR: User role '${userData.role}' is authorized. Loading payroll data.`);
-                        fetchAndDisplayPayrollRecords();
-                        populateEmployeeDropdownForAdjustments(); 
-                        setupPayrollPageListeners();
-                    } else {
-                        console.error(`DEBUG APR: User role '${userData.role}' not authorized. Redirecting.`);
-                        window.location.assign('/'); 
-                    }
-                } else { // Handle case where user doc doesn't exist
-                     console.error("DEBUG APR: User document not found. Redirecting.");
-                     window.location.assign('/');
-                }
+            
+            user.getIdTokenResult().then(idTokenResult => {
+                const claims = idTokenResult.claims;
+                console.log("DEBUG APR: User claims:", claims);
+                
+                // Attempt to get Firestore user document for role verification, but proceed if claims are sufficient
+                db.collection('users').doc(user.uid).get()
+                    .then(docSnapshot => {
+                        let userData = null;
+                        if (docSnapshot.exists) {
+                            userData = docSnapshot.data();
+                            console.log("DEBUG APR: User document data from Firestore:", userData);
+                        } else {
+                            console.warn("DEBUG APR: User document not found in Firestore for UID:", user.uid);
+                        }
 
+                        // Check for admin privileges based on claims OR Firestore role
+                        const isAdminByClaims = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
+                        const isAdminByRole = userData && (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'standard_admin');
+
+                        if (isAdminByClaims || isAdminByRole) {
+                            console.log("DEBUG APR: Admin access confirmed for Payroll Page.");
+                            fetchAndDisplayPayrollRecords();
+                            populateEmployeeDropdownForAdjustments(); 
+                            setupPayrollPageListeners();
+                        } else {
+                            console.error("DEBUG APR: Access denied. User does not have sufficient admin claims or role. Redirecting.");
+                            window.location.assign('/');
+                        }
+                    })
+                    .catch(error => { 
+                        console.error("DEBUG APR: Error fetching user data from Firestore:", error);
+                        // Allow access if claims are sufficient, even if Firestore doc fails, but log error
+                        const isAdminByClaimsOnly = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
+                        if(isAdminByClaimsOnly) {
+                            console.warn("DEBUG APR: Proceeding with admin access based on claims despite Firestore user doc error.");
+                            fetchAndDisplayPayrollRecords();
+                            populateEmployeeDropdownForAdjustments(); 
+                            setupPayrollPageListeners();
+                        } else {
+                            window.location.assign('/');
+                        }
+                    });
             }).catch(error => {
-                console.error("DEBUG: Admin Payroll Page - Error fetching user role:", error);
-                window.location.assign('/'); 
+                console.error("DEBUG APR: Error fetching ID token result:", error);
+                window.location.assign('/');
             });
         } else {
             console.log("DEBUG: Admin Payroll Page - No user signed in. Redirecting to login.");

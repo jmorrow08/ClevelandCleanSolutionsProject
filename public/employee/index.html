@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Dashboard</title>
-    <link rel="stylesheet" href="css/employee-portal-styles.css">
+    <link rel="stylesheet" href="../css/tailwind.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
+    
+    <!-- Lucide Icons for modern interface -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
         /* Styles from employee_portal_html_v4_my_uploads, plus scrollbar for photo container */
         #my-uploaded-photos-container {
@@ -48,9 +54,9 @@
         }
     </style>
 </head>
-<body>
+<body class="min-h-screen bg-background font-sans">
 
-<div id="employee-dashboard-content" style="display: none;">
+<div id="employee-dashboard-content" class="max-w-4xl mx-auto p-6" style="display: none;">
     <div class="ccs-header-v4">
         <h1 id="welcome-message" class="ccs-title-v4">Loading Employee Portal...</h1>
         <div class="ccs-usermenu-v4">
@@ -164,6 +170,15 @@
 
 <script src="../js/firebase-config.js"></script> 
 <script src="js/employee-portal.js"></script>
+
+<script>
+// Initialize Lucide icons when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
 
 </body>
 </html>
