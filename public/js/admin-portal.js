@@ -168,6 +168,291 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Load job status counts
+    async function loadJobStatusCounts() {
+        if (!db) return;
+        
+        try {
+            // Get current date for filtering
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            
+            // Count jobs by status
+            const pendingSnapshot = await db.collection('serviceHistory')
+                .where('status', '==', 'Scheduled')
+                .where('serviceDate', '>=', firebase.firestore.Timestamp.fromDate(startOfToday))
+                .get();
+                
+            const inProgressSnapshot = await db.collection('serviceHistory')
+                .where('status', '==', 'In Progress')
+                .get();
+                
+            const completedSnapshot = await db.collection('serviceHistory')
+                .where('status', '==', 'Complete')
+                .where('serviceDate', '>=', firebase.firestore.Timestamp.fromDate(startOfToday))
+                .get();
+                
+            const scheduledSnapshot = await db.collection('serviceHistory')
+                .where('status', '==', 'Scheduled')
+                .get();
+
+            // Update the counts
+            document.getElementById('pending-jobs-count').textContent = pendingSnapshot.size;
+            document.getElementById('in-progress-jobs-count').textContent = inProgressSnapshot.size;
+            document.getElementById('completed-jobs-count').textContent = completedSnapshot.size;
+            document.getElementById('scheduled-jobs-count').textContent = scheduledSnapshot.size;
+            
+        } catch (error) {
+            console.error('Error loading job status counts:', error);
+        }
+    }
+
+    // Load payroll status
+    async function loadPayrollStatus() {
+        if (!db) return;
+        
+        try {
+            // Try to estimate payroll from completed services (fallback approach)
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+            
+            // Get completed services in the last 30 days to estimate pending payroll
+            const completedServicesSnapshot = await db.collection('serviceHistory')
+                .where('status', '==', 'Complete')
+                .where('serviceDate', '>=', firebase.firestore.Timestamp.fromDate(thirtyDaysAgo))
+                .get();
+                
+            let estimatedPendingAmount = 0;
+            let completedJobs = 0;
+            
+            completedServicesSnapshot.forEach(doc => {
+                const data = doc.data();
+                // Estimate $50 per completed service (adjust as needed)
+                estimatedPendingAmount += 50;
+                completedJobs++;
+            });
+            
+            // Try to get actual payroll records, but handle permission errors
+            let actualPendingAmount = estimatedPendingAmount;
+            let processedCount = 0;
+            let statusMessage = `Estimated based on ${completedJobs} completed jobs`;
+            
+            try {
+                const payrollSnapshot = await db.collection('payrollRecords')
+                    .where('status', '==', 'Pending')
+                    .get();
+                    
+                actualPendingAmount = 0;
+                payrollSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    actualPendingAmount += data.totalAmount || 0;
+                });
+                
+                const processedSnapshot = await db.collection('payrollRecords')
+                    .where('status', '==', 'Paid')
+                    .get();
+                    
+                processedCount = processedSnapshot.size;
+                statusMessage = `${payrollSnapshot.size} pending records • Last updated: ${new Date().toLocaleTimeString()}`;
+                
+            } catch (payrollError) {
+                console.warn('Payroll collection access limited, using estimation:', payrollError);
+                statusMessage = `Estimated: ${completedJobs} jobs completed • Limited access mode`;
+            }
+
+            // Update the display
+            document.getElementById('pending-payroll-amount').textContent = `$${actualPendingAmount.toFixed(2)}`;
+            document.getElementById('processed-payroll-count').textContent = processedCount;
+            document.getElementById('payroll-status-message').textContent = statusMessage;
+            
+        } catch (error) {
+            console.error('Error loading payroll status:', error);
+            document.getElementById('payroll-status-message').textContent = 'Unable to load payroll status';
+            document.getElementById('pending-payroll-amount').textContent = '$0.00';
+            document.getElementById('processed-payroll-count').textContent = '0';
+        }
+    }
+
+    // Load recent services
+    async function loadRecentServices() {
+        if (!db) return;
+        
+        try {
+            const recentSnapshot = await db.collection('serviceHistory')
+                .orderBy('createdAt', 'desc')
+                .limit(5)
+                .get();
+                
+            const recentServicesList = document.getElementById('recent-services-list');
+            if (!recentServicesList) return;
+            
+            if (recentSnapshot.empty) {
+                recentServicesList.innerHTML = '<div class="text-muted-foreground text-sm">No recent services found</div>';
+                return;
+            }
+            
+            let servicesHtml = '';
+            recentSnapshot.forEach(doc => {
+                const data = doc.data();
+                const date = data.serviceDate ? data.serviceDate.toDate().toLocaleDateString() : 'No date';
+                const client = data.clientName || 'Unknown client';
+                const status = data.status || 'Unknown';
+                
+                const statusColor = {
+                    'Complete': 'text-green-600',
+                    'In Progress': 'text-blue-600',
+                    'Scheduled': 'text-purple-600',
+                    'Cancelled': 'text-red-600'
+                }[status] || 'text-gray-600';
+                
+                servicesHtml += `
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                        <div>
+                            <div class="font-medium text-sm">${client}</div>
+                            <div class="text-xs text-muted-foreground">${date}</div>
+                        </div>
+                        <div class="text-xs ${statusColor} font-medium">${status}</div>
+                    </div>
+                `;
+            });
+            
+            recentServicesList.innerHTML = servicesHtml;
+            
+        } catch (error) {
+            console.error('Error loading recent services:', error);
+            document.getElementById('recent-services-list').innerHTML = 
+                '<div class="text-red-500 text-sm">Error loading recent services</div>';
+        }
+    }
+
+    // Load employee activity and clock-in/out data
+    async function loadEmployeeActivity() {
+        const timeTrackingDisplay = document.getElementById('time-tracking-display');
+        if (!timeTrackingDisplay || !db) return;
+        
+        try {
+            timeTrackingDisplay.innerHTML = '<p class="text-muted-foreground">Loading employee activity...</p>';
+            
+            // Get recent employee clock-in/out events (last 24 hours)
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            
+            // Try to fetch time tracking data from different possible collections
+            let activityHtml = '';
+            let hasData = false;
+            
+            try {
+                // Check for time tracking in employeeTimeTracking collection
+                const timeTrackingSnapshot = await db.collection('employeeTimeTracking')
+                    .where('timestamp', '>=', firebase.firestore.Timestamp.fromDate(oneDayAgo))
+                    .orderBy('timestamp', 'desc')
+                    .limit(10)
+                    .get();
+                
+                if (!timeTrackingSnapshot.empty) {
+                    hasData = true;
+                    activityHtml += '<div class="space-y-2"><h4 class="font-medium text-sm">Recent Clock Events (24h)</h4>';
+                    
+                    timeTrackingSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const time = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Unknown time';
+                        const employee = data.employeeName || 'Unknown employee';
+                        const action = data.action || 'activity';
+                        const location = data.locationName || 'Unknown location';
+                        
+                        const actionColor = action.toLowerCase().includes('in') ? 'text-green-600' : 'text-red-600';
+                        
+                        activityHtml += `
+                            <div class="flex justify-between items-center py-1 text-xs border-b border-gray-100 last:border-b-0">
+                                <div>
+                                    <span class="font-medium">${employee}</span> - ${location}
+                                </div>
+                                <div class="text-right">
+                                    <div class="${actionColor} font-medium">${action}</div>
+                                    <div class="text-muted-foreground">${time}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    activityHtml += '</div>';
+                }
+            } catch (timeTrackingError) {
+                console.log('No time tracking collection or access limited:', timeTrackingError);
+            }
+            
+            // If no time tracking data, try to get recent service assignments as activity indicator
+            if (!hasData) {
+                try {
+                    const recentServicesSnapshot = await db.collection('serviceHistory')
+                        .where('serviceDate', '>=', firebase.firestore.Timestamp.fromDate(oneDayAgo))
+                        .orderBy('serviceDate', 'desc')
+                        .limit(5)
+                        .get();
+                    
+                    if (!recentServicesSnapshot.empty) {
+                        hasData = true;
+                        activityHtml += '<div class="space-y-2"><h4 class="font-medium text-sm">Recent Service Activity (24h)</h4>';
+                        
+                        recentServicesSnapshot.forEach(doc => {
+                            const data = doc.data();
+                            const time = data.serviceDate ? data.serviceDate.toDate().toLocaleString() : 'Unknown time';
+                            const location = data.locationName || 'Unknown location';
+                            const employees = data.employeeAssignments && data.employeeAssignments.length > 0 
+                                ? data.employeeAssignments.map(emp => emp.employeeName || 'Unknown').join(', ')
+                                : 'No assignments';
+                            const status = data.status || 'Unknown';
+                            
+                            const statusColor = {
+                                'Complete': 'text-green-600',
+                                'In Progress': 'text-blue-600',
+                                'Scheduled': 'text-purple-600'
+                            }[status] || 'text-gray-600';
+                            
+                            activityHtml += `
+                                <div class="flex justify-between items-center py-1 text-xs border-b border-gray-100 last:border-b-0">
+                                    <div>
+                                        <span class="font-medium">${location}</span><br>
+                                        <span class="text-muted-foreground">${employees}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="${statusColor} font-medium">${status}</div>
+                                        <div class="text-muted-foreground">${time}</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        activityHtml += '</div>';
+                    }
+                } catch (serviceError) {
+                    console.log('Error fetching recent services for activity:', serviceError);
+                }
+            }
+            
+            // Show results or no data message
+            if (hasData) {
+                timeTrackingDisplay.innerHTML = activityHtml;
+            } else {
+                timeTrackingDisplay.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="text-muted-foreground text-sm">No recent employee activity found</div>
+                        <div class="text-xs text-muted-foreground mt-1">
+                            Clock-in/out and service assignments will appear here
+                        </div>
+                    </div>
+                `;
+            }
+            
+        } catch (error) {
+            console.error('Error loading employee activity:', error);
+            timeTrackingDisplay.innerHTML = `
+                <div class="text-red-500 text-sm">
+                    Error loading employee activity: ${error.message}
+                </div>
+            `;
+        }
+    }
+
     // --- MODIFIED LIST DISPLAY FUNCTIONS ---
     async function fetchAndDisplayServicesForDay(targetDate, listElementId, loadingMessageText = "Loading services...") {
         const listEl = document.getElementById(listElementId);
@@ -877,6 +1162,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         if(quickStatsActiveClientsEl) quickStatsActiveClientsEl.textContent = await fetchActiveClientCount();
                         if(quickStatsActiveEmployeesEl) quickStatsActiveEmployeesEl.textContent = await fetchActiveEmployeeCount();
 
+                        // Populate Quick Add Service client dropdown on page load
+                        populateQASClientDropdown();
+
+                        // Load additional dashboard stats
+                                    loadJobStatusCounts();
+            loadPayrollStatus();
+            loadRecentServices();
+            loadEmployeeActivity();
+
+                        // Initialize payroll dropdown if function is available
+                        if (typeof window.populateEmployeeDropdownForAdjustments === 'function') {
+                            window.populateEmployeeDropdownForAdjustments();
+                        }
+
 
                         if (!window.adminPortalModalListenersAttached) { // Use a more specific flag
                             console.log("DEBUG: Attaching MODAL and other listeners for admin.html...");
@@ -890,6 +1189,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 });
                             }
                             if (triggerPayrollButton) { triggerPayrollButton.addEventListener('click', handleTriggerPayrollProcessing); }
+
+                            // Dashboard payroll button
+                            const dashboardPayrollButton = document.getElementById('dashboard-process-payroll-button');
+                            if (dashboardPayrollButton) {
+                                dashboardPayrollButton.addEventListener('click', () => {
+                                    // Switch to payroll view and trigger processing
+                                    switchView('payroll');
+                                    setTimeout(() => {
+                                        const mainPayrollButton = document.getElementById('process-payroll-button');
+                                        if (mainPayrollButton) {
+                                            mainPayrollButton.click();
+                                        }
+                                    }, 100);
+                                });
+                            }
                             if (changePasswordForm) { changePasswordForm.addEventListener('submit', handleChangePasswordSubmit); }
                             if (showAdminPasswordFormBtn) { /* ... no change ... */ 
                                 showAdminPasswordFormBtn.addEventListener('click', () => { 

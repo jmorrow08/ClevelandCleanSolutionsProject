@@ -3,170 +3,532 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Dashboard</title>
-    <link rel="stylesheet" href="../css/tailwind.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Employee Portal - Cleveland Clean Solutions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
     
-    <!-- Lucide Icons for modern interface -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(214.3 31.8% 91.4%)",
+                        input: "hsl(214.3 31.8% 91.4%)",
+                        ring: "hsl(222.2 84% 4.9%)",
+                        background: "hsl(0 0% 100%)",
+                        foreground: "hsl(222.2 84% 4.9%)",
+                        primary: {
+                            DEFAULT: "hsl(222.2 47.4% 11.2%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(210 40% 96%)",
+                            foreground: "hsl(222.2 84% 4.9%)",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(0 84.2% 60.2%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(210 40% 96%)",
+                            foreground: "hsl(215.4 16.3% 46.9%)",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(210 40% 96%)",
+                            foreground: "hsl(222.2 84% 4.9%)",
+                        },
+                        card: {
+                            DEFAULT: "hsl(0 0% 100%)",
+                            foreground: "hsl(222.2 84% 4.9%)",
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    
     <style>
-        /* Styles from employee_portal_html_v4_my_uploads, plus scrollbar for photo container */
-        #my-uploaded-photos-container {
+        .btn-primary {
+            @apply bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+        }
+        .btn-secondary {
+            @apply bg-secondary text-secondary-foreground px-4 py-2 rounded-md font-medium hover:bg-secondary/80 transition-colors;
+        }
+        .btn-destructive {
+            @apply bg-destructive text-destructive-foreground px-4 py-2 rounded-md font-medium hover:bg-destructive/90 transition-colors;
+        }
+        .card {
+            @apply bg-white border border-border rounded-lg shadow-sm;
+        }
+        .card-header {
+            @apply p-6 pb-0;
+        }
+        .card-title {
+            @apply text-xl font-semibold leading-none tracking-tight;
+        }
+        .card-content {
+            @apply p-6;
+        }
+        .text-muted-foreground {
+            @apply text-muted-foreground;
+        }
+        
+        .photo-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-            max-height: 450px; /* Or your desired height */
-            overflow-y: auto;
-            padding: 10px; 
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
         }
-        .my-photo-item {
-            border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px;
-            background-color: #f9f9f9; text-align: left; font-size: 0.85em;
-        }
-        .my-photo-item img {
-            width: 100%; height: 130px; object-fit: cover;
-            border-radius: 3px; margin-bottom: 8px; cursor: pointer;
-        }
-        .my-photo-item p { margin: 4px 0; word-wrap: break-word; }
-        .my-photo-item .photo-meta { color: #555; }
-        .my-photo-item .photo-notes { margin-top: 8px; font-style: italic; color: #333; white-space: pre-wrap; }
-        /* Make sure other styles from your employee-portal-styles.css are loaded */
-
-        /* Basic styling for the portal switch button if not in employee-portal-styles.css */
-        .portal-switch-button {
-            background-color: #007bff; 
-            color: white; 
-            padding: 8px 12px; 
-            text-decoration: none; 
-            border-radius: 4px; 
-            margin-left: 10px; /* Adjusted margin slightly */
-            display: inline-block; /* Ensures proper layout with other buttons */
-        }
+                 .photo-item {
+             @apply bg-white border border-border rounded-lg p-4 hover:shadow-md transition-shadow;
+         }
+         .photo-item img {
+             @apply w-full h-32 object-cover rounded-md mb-3 cursor-pointer;
+         }
+         .action-card {
+             @apply flex flex-col items-center p-4 rounded-lg border border-border hover:shadow-md transition-all bg-white hover:bg-gray-50;
+         }
+         .view-section {
+             @apply space-y-6;
+         }
+         .nav-item.active {
+             @apply bg-primary text-primary-foreground;
+         }
+         .nav-item:not(.active):hover {
+             @apply bg-secondary;
+         }
     </style>
 </head>
-<body class="min-h-screen bg-background font-sans">
-
-<div id="employee-dashboard-content" class="max-w-4xl mx-auto p-6" style="display: none;">
-    <div class="ccs-header-v4">
-        <h1 id="welcome-message" class="ccs-title-v4">Loading Employee Portal...</h1>
-        <div class="ccs-usermenu-v4">
-            <a href="../admin.html" id="go-to-admin-portal-link" class="portal-switch-button" style="display:none;">Switch to Admin View</a>
-            <button id="logout-button" class="ccs-button-v4 ccs-button-danger-v4">Logout</button>
-            </div>
-    </div>
-    <hr style="border: none; border-top: 1px solid #eee; margin-bottom: 25px;">
-
-    <div class="form-group" style="margin-bottom: 25px;">
-        <label for="location-select-input">Select Current Location:</label>
-        <select id="location-select-input" required>
-            <option value="">-- Loading Locations --</option>
-        </select>
-        <small><i>Location required for Clock-In, Photo Uploads, and Job Notes.</i></small>
-    </div>
-
-    <div id="clock-section" class="ccs-card-v4">
-        <h3 class="ccs-card-title-v4">Time Clock</h3>
-        <p><strong>Status:</strong> <span id="clock-status">Loading...</span></p>
-        <div id="clock-buttons">
-            <button id="clock-in-button" class="ccs-button-v4" style="display: none;">Clock In</button>
-            <button id="clock-out-button" class="ccs-button-v4" style="display: none;">Clock Out</button>
-        </div>
-        <div id="clock-message" style="margin-top: 15px;"></div>
-    </div>
-
-    <div id="upload-section" class="ccs-card-v4">
-        <h3 class="ccs-card-title-v4">Upload Job Photo(s)</h3>
-        <div style="margin-bottom: 15px;">
-            <label for="camera-input" class="action-button" style="margin-bottom: 10px;">Take Photo</label>
-            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
-           
-            <label for="gallery-input" class="action-button" style="margin-bottom: 10px;">Select from Gallery</label>
-            <input type="file" id="gallery-input" accept="image/*" multiple style="display: none;">
-        </div>
-        <div id="selected-files-display" style="margin-bottom: 15px; font-style: italic;">
-            </div>
-        <div class="form-group">
-            <label for="photo-upload-notes">Notes for these Photo(s):</label>
-            <textarea id="photo-upload-notes" rows="3" placeholder="Optional: Add notes about these photos..."></textarea>
-        </div>
-        <button id="upload-button" class="ccs-button-v4">Upload Selected Photo(s)</button>
-        <div id="upload-progress" style="margin-top: 10px; height: 1.2em;"></div>
-        <div id="upload-message" style="margin-top: 10px;"></div>
-    </div>
-
-    <div id="my-uploads-section" class="ccs-card-v4">
-        <h3 class="ccs-card-title-v4">My Recent Uploads (Today)</h3> <p id="my-uploads-loading-message" class="ccs-loading-sub" style="display: none;">Loading your uploaded photos...</p>
-        <div id="my-uploaded-photos-container">
-            </div>
-        <p id="no-my-uploads-message" class="ccs-no-data-msg" style="display: none;">You have not uploaded any photos today.</p>
-    </div>
-
-    <div id="job-notes-section" class="ccs-card-v4">
-        <h3 class="ccs-card-title-v4">General Job Notes</h3>
-        <p><small><i>Use this section for general notes about the current service/location (e.g., supplies needed, access issues, client requests). These notes are linked to your current selected location and the time you save them.</i></small></p>
-        <div class="form-group">
-            <label for="general-job-notes-textarea">Your Notes:</label>
-            <textarea id="general-job-notes-textarea" rows="4" placeholder="Enter any general notes for this job/location..."></textarea>
-        </div>
-        <div class="form-actions" style="text-align: left;"> 
-            <button id="save-job-notes-button" class="ccs-button-v4 save-button">Save Job Notes</button>
-        </div>
-        <div id="job-notes-message" class="form-message" style="margin-top: 10px;"></div>
-    </div>
-
-    <div id="payroll-section" class="ccs-card-v4">
-        <h3 class="ccs-card-title-v4">Recent Payroll</h3>
-        <div id="payroll-list-container">
-            <p id="payroll-loading-message" class="ccs-loading-sub">Loading payroll...</p>
-            <div style="overflow-x: auto;">
-                <table id="payroll-table" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>Pay Period</th>
-                            <th>Payment Date</th>
-                            <th>Net Pay</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="payroll-table-body"></tbody>
-                </table>
-            </div>
-            <p id="no-payroll-message" class="ccs-no-data-msg" style="display: none;">No payroll records found.</p>
+<body class="min-h-screen bg-gray-50 font-sans">
+    <!-- Loading State -->
+    <div id="employee-loading-message" class="flex items-center justify-center min-h-screen">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p class="text-lg text-muted-foreground">Loading Employee Portal...</p>
         </div>
     </div>
 
-    <div id="change-password-section" class="ccs-card-v4">
-        <h3 class="ccs-card-title-v4">Change Password</h3>
-        <form id="change-password-form">
-            <div class="form-group">
-                <label for="current-password">Current Password:</label>
-                <input type="password" id="current-password" required>
+    <!-- Main Employee Dashboard -->
+    <div id="employee-dashboard-content" class="min-h-screen bg-background" style="display: none;">
+        <div class="flex">
+            <!-- Sidebar -->
+            <div class="w-64 bg-white shadow-lg border-r border-border">
+                <div class="p-6">
+                    <h1 class="text-xl font-bold text-foreground">Employee Portal</h1>
+                    <p class="text-sm text-muted-foreground" id="employee-name-sidebar">Loading...</p>
+                </div>
+                <nav class="px-4 space-y-2">
+                    <button id="nav-dashboard" class="nav-item active w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors bg-primary text-primary-foreground">
+                        <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                        Dashboard
+                    </button>
+                    <button id="nav-clock" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="clock" class="h-5 w-5"></i>
+                        Time Clock
+                    </button>
+                    <button id="nav-photos" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="camera" class="h-5 w-5"></i>
+                        Upload Photos
+                    </button>
+                    <button id="nav-uploads" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="images" class="h-5 w-5"></i>
+                        My Photos
+                    </button>
+                    <button id="nav-notes" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="sticky-note" class="h-5 w-5"></i>
+                        Job Notes
+                    </button>
+                    <button id="nav-payroll" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="dollar-sign" class="h-5 w-5"></i>
+                        Payroll
+                    </button>
+                    <button id="nav-settings" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="settings" class="h-5 w-5"></i>
+                        Settings
+                    </button>
+                </nav>
+                <div class="absolute bottom-4 left-4 right-4">
+                    <a href="../admin.html" id="go-to-admin-portal-link" class="btn-secondary w-full mb-2 hidden">
+                        <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
+                        Admin View
+                    </a>
+                    <button id="logout-button" class="btn-destructive w-full">
+                        <i data-lucide="log-out" class="h-4 w-4 mr-2"></i>
+                        Logout
+                    </button>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="new-password">New Password (min. 6 characters):</label>
-                <input type="password" id="new-password" required minlength="6">
+
+            <!-- Main Content -->
+            <div class="flex-1 p-8">
+                <!-- Dashboard View -->
+                <div id="view-dashboard" class="view-section">
+                    <div class="mb-6">
+                        <h1 id="welcome-message" class="text-3xl font-bold text-foreground">Welcome, Employee!</h1>
+                        <p class="text-muted-foreground">Cleveland Clean Solutions Employee Portal</p>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="flex items-center gap-4">
+                                    <div class="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="clock" class="h-6 w-6 text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Clock Status</p>
+                                        <div class="flex items-center gap-2">
+                                            <div class="h-2 w-2 rounded-full bg-gray-400" id="dashboard-clock-indicator"></div>
+                                            <span class="font-semibold" id="dashboard-clock-status">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="flex items-center gap-4">
+                                    <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="camera" class="h-6 w-6 text-green-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Photos Today</p>
+                                        <span class="font-semibold" id="dashboard-photos-count">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="flex items-center gap-4">
+                                    <div class="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="map-pin" class="h-6 w-6 text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Current Location</p>
+                                        <span class="font-semibold" id="dashboard-location">Not Selected</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Selection -->
+                    <div class="card mb-6">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="map-pin" class="h-5 w-5"></i>
+                                Current Location
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="space-y-3">
+                                <div>
+                                    <label for="location-select-input" class="block text-sm font-medium mb-2">Select your working location:</label>
+                                    <select id="location-select-input" required class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                        <option value="">-- Loading Locations --</option>
+                                    </select>
+                                </div>
+                                <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                    <div class="flex items-start gap-2">
+                                        <i data-lucide="info" class="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"></i>
+                                        <p class="text-sm text-blue-800">Location is required for clock-in, photo uploads, and job notes.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Quick Actions</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button class="action-card" onclick="showView('clock')">
+                                    <div class="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                                        <i data-lucide="clock" class="h-6 w-6 text-blue-600"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">Time Clock</span>
+                                </button>
+                                <button class="action-card" onclick="showView('photos')">
+                                    <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                                        <i data-lucide="camera" class="h-6 w-6 text-green-600"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">Upload Photos</span>
+                                </button>
+                                <button class="action-card" onclick="showView('notes')">
+                                    <div class="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                                        <i data-lucide="sticky-note" class="h-6 w-6 text-orange-600"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">Job Notes</span>
+                                </button>
+                                <button class="action-card" onclick="showView('payroll')">
+                                    <div class="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                                        <i data-lucide="dollar-sign" class="h-6 w-6 text-purple-600"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">Payroll</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Clock View -->
+                <div id="view-clock" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Time Clock</h1>
+                        <p class="text-muted-foreground">Track your work hours</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="clock" class="h-5 w-5"></i>
+                                Time Clock
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-3 w-3 rounded-full bg-gray-400" id="clock-status-indicator"></div>
+                                        <div>
+                                            <p class="font-medium text-foreground">Current Status</p>
+                                            <p class="text-sm text-muted-foreground" id="clock-status">Loading...</p>
+                                        </div>
+                                    </div>
+                                    <div id="clock-buttons" class="flex gap-2">
+                                        <button id="clock-in-button" class="btn-primary hidden">
+                                            <i data-lucide="play" class="h-4 w-4 mr-2"></i>
+                                            Clock In
+                                        </button>
+                                        <button id="clock-out-button" class="btn-destructive hidden">
+                                            <i data-lucide="square" class="h-4 w-4 mr-2"></i>
+                                            Clock Out
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="clock-message" class="text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Photos View -->
+                <div id="view-photos" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Upload Job Photos</h1>
+                        <p class="text-muted-foreground">Document your work with photos</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="camera" class="h-5 w-5"></i>
+                                Upload Job Photos
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label for="camera-input" class="btn-primary cursor-pointer text-center">
+                                        <i data-lucide="camera" class="h-4 w-4 mr-2"></i>
+                                        Take Photo
+                                    </label>
+                                    <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
+                                    
+                                    <label for="gallery-input" class="btn-secondary cursor-pointer text-center">
+                                        <i data-lucide="image" class="h-4 w-4 mr-2"></i>
+                                        Select from Gallery
+                                    </label>
+                                    <input type="file" id="gallery-input" accept="image/*" multiple class="hidden">
+                                </div>
+                                
+                                <div id="selected-files-display" class="p-3 bg-gray-50 rounded-md text-sm text-muted-foreground italic hidden">
+                                    No files selected
+                                </div>
+                                
+                                <div>
+                                    <label for="photo-upload-notes" class="block text-sm font-medium mb-2">Photo Notes (Optional):</label>
+                                    <textarea id="photo-upload-notes" rows="3" placeholder="Add notes about these photos..." 
+                                            class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"></textarea>
+                                </div>
+                                
+                                <button id="upload-button" class="btn-primary w-full">
+                                    <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
+                                    Upload Selected Photos
+                                </button>
+                                
+                                <div id="upload-progress" class="h-2 bg-gray-200 rounded-full hidden">
+                                    <div class="h-2 bg-primary rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                
+                                <div id="upload-message" class="text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- My Uploads View -->
+                <div id="view-uploads" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">My Photos</h1>
+                        <p class="text-muted-foreground">Your uploaded photos from today</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="images" class="h-5 w-5"></i>
+                                My Recent Uploads (Today)
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="my-uploads-loading-message" class="flex items-center justify-center py-8 hidden">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                <span class="text-muted-foreground">Loading your uploaded photos...</span>
+                            </div>
+                            
+                            <div id="my-uploaded-photos-container" class="photo-grid">
+                                <!-- Photos will be loaded here -->
+                            </div>
+                            
+                            <div id="no-my-uploads-message" class="text-center py-8 hidden">
+                                <i data-lucide="image-off" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
+                                <p class="text-muted-foreground">You have not uploaded any photos today.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Job Notes View -->
+                <div id="view-notes" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Job Notes</h1>
+                        <p class="text-muted-foreground">Add notes about your current work</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="sticky-note" class="h-5 w-5"></i>
+                                General Job Notes
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="space-y-4">
+                                <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
+                                    <div class="flex items-start gap-2">
+                                        <i data-lucide="lightbulb" class="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0"></i>
+                                        <p class="text-sm text-amber-800">Use this section for general notes about the current service/location (e.g., supplies needed, access issues, client requests). These notes are linked to your selected location.</p>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="general-job-notes-textarea" class="block text-sm font-medium mb-2">Your Notes:</label>
+                                    <textarea id="general-job-notes-textarea" rows="4" placeholder="Enter any general notes for this job/location..." 
+                                            class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"></textarea>
+                                </div>
+                                
+                                <button id="save-job-notes-button" class="btn-primary">
+                                    <i data-lucide="save" class="h-4 w-4 mr-2"></i>
+                                    Save Job Notes
+                                </button>
+                                
+                                <div id="job-notes-message" class="text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Payroll View -->
+                <div id="view-payroll" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Payroll</h1>
+                        <p class="text-muted-foreground">View your recent payroll information</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="dollar-sign" class="h-5 w-5"></i>
+                                Recent Payroll
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="payroll-loading-message" class="flex items-center justify-center py-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                <span class="text-muted-foreground">Loading payroll records...</span>
+                            </div>
+                            
+                            <div id="payroll-cards-container" class="space-y-3 hidden">
+                                <!-- Payroll cards will be loaded here -->
+                            </div>
+                            
+                            <div id="no-payroll-message" class="text-center py-8 hidden">
+                                <i data-lucide="receipt" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
+                                <p class="text-muted-foreground">No payroll records found.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings View -->
+                <div id="view-settings" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Settings</h1>
+                        <p class="text-muted-foreground">Manage your account settings</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="lock" class="h-5 w-5"></i>
+                                Change Password
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <form id="change-password-form" class="space-y-4">
+                                <div>
+                                    <label for="current-password" class="block text-sm font-medium mb-2">Current Password:</label>
+                                    <input type="password" id="current-password" required 
+                                           class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                </div>
+                                
+                                <div>
+                                    <label for="new-password" class="block text-sm font-medium mb-2">New Password (min. 6 characters):</label>
+                                    <input type="password" id="new-password" required minlength="6" 
+                                           class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                </div>
+                                
+                                <div>
+                                    <label for="confirm-password" class="block text-sm font-medium mb-2">Confirm New Password:</label>
+                                    <input type="password" id="confirm-password" required minlength="6" 
+                                           class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                </div>
+                                
+                                <button type="submit" id="update-password-button" class="btn-primary">
+                                    <i data-lucide="key" class="h-4 w-4 mr-2"></i>
+                                    Update Password
+                                </button>
+                                
+                                <div id="password-message" class="text-sm"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="confirm-password">Confirm New Password:</label>
-                <input type="password" id="confirm-password" required minlength="6">
-            </div>
-            <div class="form-actions">
-                <button type="submit" id="update-password-button" class="save-button">Update Password</button>
-            </div>
-        </form>
-        <div id="password-message" class="form-message"></div>
+        </div>
     </div>
-</div>
 
 <script src="../js/firebase-config.js"></script> 
 <script src="js/employee-portal.js"></script>

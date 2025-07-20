@@ -19,9 +19,8 @@
     <!-- Google Maps API -->
     <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCm6ln4PSDxYKsrNEFpuYlnjA0B3dJxGLs&callback=initMapAsh"></script>
     
-    <!-- Date libraries -->
-    <script src="js/libs/date_fns.min.js"></script>
-    <script src="js/libs/date_fns_tz.min.js"></script>
+    <!-- Date libraries removed due to compatibility issues -->
+    <!-- Cache bust: v2025.07.18.15.30 -->
     
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -33,6 +32,94 @@
         }
         .view-section.active {
             display: block;
+        }
+        
+        /* Mobile-friendly sidebar styles */
+        .sidebar {
+            transition: width 0.3s ease, transform 0.3s ease;
+        }
+        
+        .sidebar-collapsed {
+            width: 64px !important;
+        }
+        
+        .sidebar-text {
+            transition: opacity 0.2s ease;
+        }
+        
+        .sidebar-collapsed .sidebar-text {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .sidebar-collapsed .nav-item {
+            justify-content: center;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        
+        /* Mobile overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            display: none;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 50;
+            }
+            
+            .sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+            
+            .sidebar-overlay.active {
+                display: block;
+            }
+        }
+        
+        /* Desktop responsive */
+        @media (min-width: 769px) {
+            .main-content {
+                transition: margin-left 0.3s ease;
+            }
+            
+            .main-content-expanded {
+                margin-left: 64px !important;
+            }
+        }
+        
+        /* Table responsive */
+        @media (max-width: 640px) {
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            table {
+                min-width: 600px;
+            }
+            
+            .card {
+                margin: 0.5rem;
+                padding: 1rem;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
         
         /* Modal styles */
@@ -91,62 +178,89 @@
         </div>
     </div>
 
+    <!-- Sidebar Overlay for Mobile -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    
     <!-- Main Application -->
     <div id="admin-dashboard-content" class="hidden">
         <div class="flex min-h-screen">
             <!-- Sidebar -->
-            <div class="w-64 bg-white shadow-lg border-r border-border fixed h-full flex flex-col">
-                <div class="p-6">
-                    <h1 class="text-xl font-bold text-foreground">Admin Portal</h1>
-                    <p class="text-sm text-muted-foreground">Cleveland Clean Solutions</p>
+            <div id="sidebar" class="sidebar w-64 bg-white shadow-lg border-r border-border fixed h-full flex flex-col">
+                <!-- Sidebar Header -->
+                <div class="p-6 border-b border-border">
+                    <div class="flex items-center justify-between">
+                        <div class="sidebar-text">
+                            <h1 class="text-xl font-bold text-foreground">Admin Portal</h1>
+                            <p class="text-sm text-muted-foreground">Cleveland Clean Solutions</p>
+                        </div>
+                        <!-- Sidebar Toggle Button -->
+                        <button id="sidebar-toggle" class="p-2 rounded-lg hover:bg-secondary transition-colors lg:flex hidden" title="Toggle Sidebar">
+                            <i data-lucide="panel-left" class="h-5 w-5"></i>
+                        </button>
+                    </div>
                 </div>
                 
-                <nav class="flex-1 px-4 py-4 space-y-2">
-                    <button onclick="switchView('dashboard')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors bg-primary text-primary-foreground" data-view="dashboard">
-                        <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
-                        Dashboard
+                <!-- Mobile Header (visible only on mobile when sidebar is open) -->
+                <div class="p-4 border-b border-border md:hidden flex items-center justify-between">
+                    <span class="font-semibold">Menu</span>
+                    <button id="sidebar-close-mobile" class="p-2 rounded-lg hover:bg-secondary transition-colors" title="Close Menu">
+                        <i data-lucide="x" class="h-5 w-5"></i>
                     </button>
-                    <button onclick="switchView('clients')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="clients">
-                        <i data-lucide="building-2" class="h-5 w-5"></i>
-                        Clients & Locations
+                </div>
+                
+                <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+                    <button onclick="switchView('dashboard')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors bg-primary text-primary-foreground" data-view="dashboard" title="Dashboard">
+                        <i data-lucide="layout-dashboard" class="h-5 w-5 flex-shrink-0"></i>
+                        <span class="sidebar-text">Dashboard</span>
                     </button>
-                    <button onclick="switchView('employees')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="employees">
-                        <i data-lucide="users" class="h-5 w-5"></i>
-                        Employees
+                    <button onclick="switchView('clients')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="clients" title="Clients & Locations">
+                        <i data-lucide="building-2" class="h-5 w-5 flex-shrink-0"></i>
+                        <span class="sidebar-text">Clients & Locations</span>
                     </button>
-                    <button onclick="switchView('service-history')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="service-history">
-                        <i data-lucide="briefcase" class="h-5 w-5"></i>
-                        Service History
+                    <button onclick="switchView('employees')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="employees" title="Employees">
+                        <i data-lucide="users" class="h-5 w-5 flex-shrink-0"></i>
+                        <span class="sidebar-text">Employees</span>
                     </button>
-                    <button onclick="switchView('payroll')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="payroll">
-                        <i data-lucide="receipt" class="h-5 w-5"></i>
-                        Payroll
+                    <button onclick="switchView('service-history')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="service-history" title="Service History">
+                        <i data-lucide="briefcase" class="h-5 w-5 flex-shrink-0"></i>
+                        <span class="sidebar-text">Service History</span>
+                    </button>
+                    <button onclick="switchView('payroll')" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary" data-view="payroll" title="Payroll">
+                        <i data-lucide="receipt" class="h-5 w-5 flex-shrink-0"></i>
+                        <span class="sidebar-text">Payroll</span>
                     </button>
                     
                     <!-- New V2 Features (Coming Soon) -->
-                    <div class="pt-4 border-t border-border mt-4">
+                    <div class="pt-4 border-t border-border mt-4 sidebar-text">
                         <p class="px-3 text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">Coming Soon</p>
-                        <button class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-muted-foreground opacity-50 cursor-not-allowed" disabled>
-                            <i data-lucide="file-text" class="h-5 w-5"></i>
-                            Invoicing
-                        </button>
-                        <button class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-muted-foreground opacity-50 cursor-not-allowed" disabled>
-                            <i data-lucide="calendar" class="h-5 w-5"></i>
-                            Scheduling
-                        </button>
                     </div>
+                    <button class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-muted-foreground opacity-50 cursor-not-allowed" disabled title="Invoicing (Coming Soon)">
+                        <i data-lucide="file-text" class="h-5 w-5 flex-shrink-0"></i>
+                        <span class="sidebar-text">Invoicing</span>
+                    </button>
+                    <button class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-muted-foreground opacity-50 cursor-not-allowed" disabled title="Scheduling (Coming Soon)">
+                        <i data-lucide="calendar" class="h-5 w-5 flex-shrink-0"></i>
+                        <span class="sidebar-text">Scheduling</span>
+                    </button>
                 </nav>
                 
                 <div class="p-4 border-t border-border">
-                    <button id="logout-button" class="btn-destructive w-full">
-                        <i data-lucide="log-out" class="h-4 w-4 mr-2"></i>
-                        Logout
+                    <button id="logout-button" class="btn-destructive w-full flex items-center justify-center gap-2" title="Logout">
+                        <i data-lucide="log-out" class="h-4 w-4 flex-shrink-0"></i>
+                        <span class="sidebar-text">Logout</span>
                     </button>
                 </div>
             </div>
-
+            
+            <!-- Mobile Menu Button -->
+            <div class="md:hidden fixed top-4 left-4 z-30">
+                <button id="mobile-menu-toggle" class="p-3 bg-white rounded-lg shadow-lg border border-border hover:bg-secondary transition-colors" title="Open Menu">
+                    <i data-lucide="menu" class="h-5 w-5"></i>
+                </button>
+            </div>
+            
             <!-- Main Content -->
-            <div class="flex-1 ml-64">
+            <div id="main-content" class="main-content flex-1 ml-64 min-h-screen bg-background overflow-x-auto">
                 <!-- Dashboard View -->
                 <div id="view-dashboard" class="view-section active p-6 space-y-6">
                     <div class="mb-6">
@@ -164,6 +278,9 @@
                             <div class="card-content">
                                 <div class="text-2xl font-bold" id="stats-today-count">-</div>
                                 <p class="text-xs text-muted-foreground">Scheduled for today</p>
+                                <div id="today-services-list" class="mt-2 space-y-1">
+                                    <!-- Today's services will be loaded here -->
+                                </div>
                             </div>
                         </div>
                         
@@ -175,6 +292,9 @@
                             <div class="card-content">
                                 <div class="text-2xl font-bold" id="stats-tomorrow-count">-</div>
                                 <p class="text-xs text-muted-foreground">Scheduled for tomorrow</p>
+                                <div id="tomorrow-services-list" class="mt-2 space-y-1">
+                                    <!-- Tomorrow's services will be loaded here -->
+                                </div>
                             </div>
                         </div>
                         
@@ -208,10 +328,44 @@
                                 <h3 class="card-title text-lg">Quick Add Service</h3>
                             </div>
                             <div class="card-content">
-                                <button id="quick-add-service-button" class="btn-primary">
-                                    <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
-                                    Add New Service
-                                </button>
+                                <form id="quick-add-service-form" class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="qas-client-select" class="block text-sm font-medium mb-1">Client</label>
+                                            <select id="qas-client-select" class="w-full px-3 py-2 border border-border rounded-md">
+                                                <option value="">-- Select Client --</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="qas-location-select" class="block text-sm font-medium mb-1">Location</label>
+                                            <select id="qas-location-select" class="w-full px-3 py-2 border border-border rounded-md">
+                                                <option value="">-- Select Location --</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="qas-service-date" class="block text-sm font-medium mb-1">Service Date</label>
+                                            <input type="date" id="qas-service-date" class="w-full px-3 py-2 border border-border rounded-md">
+                                        </div>
+                                        <div>
+                                            <label for="qas-service-time" class="block text-sm font-medium mb-1">Service Time</label>
+                                            <input type="time" id="qas-service-time" class="w-full px-3 py-2 border border-border rounded-md">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="qas-service-type" class="block text-sm font-medium mb-1">Service Notes</label>
+                                        <textarea id="qas-service-type" rows="2" placeholder="Service type and notes..." class="w-full px-3 py-2 border border-border rounded-md"></textarea>
+                                    </div>
+                                    <div id="qas-message" class="text-sm hidden"></div>
+                                    <div class="flex gap-2">
+                                        <button type="submit" id="quick-add-service-button" class="btn-primary">
+                                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                                            Add Service
+                                        </button>
+                                        <button type="button" id="qas-cancel-button" class="btn-secondary">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                         
@@ -227,14 +381,69 @@
                         </div>
                     </div>
 
+                    <!-- Job Processing Status -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Job Processing Status</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-center p-3 bg-yellow-50 rounded-lg border">
+                                    <div class="text-xl font-bold text-yellow-600" id="pending-jobs-count">-</div>
+                                    <div class="text-xs text-yellow-600">Pending Jobs</div>
+                                </div>
+                                <div class="text-center p-3 bg-blue-50 rounded-lg border">
+                                    <div class="text-xl font-bold text-blue-600" id="in-progress-jobs-count">-</div>
+                                    <div class="text-xs text-blue-600">In Progress</div>
+                                </div>
+                                <div class="text-center p-3 bg-green-50 rounded-lg border">
+                                    <div class="text-xl font-bold text-green-600" id="completed-jobs-count">-</div>
+                                    <div class="text-xs text-green-600">Completed</div>
+                                </div>
+                                <div class="text-center p-3 bg-purple-50 rounded-lg border">
+                                    <div class="text-xl font-bold text-purple-600" id="scheduled-jobs-count">-</div>
+                                    <div class="text-xs text-purple-600">Scheduled</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payroll Status -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="flex justify-between items-center">
+                                <h3 class="card-title">Payroll Status</h3>
+                                <button id="dashboard-process-payroll-button" class="btn-primary text-xs px-3 py-1">
+                                    <i data-lucide="dollar-sign" class="h-3 w-3 mr-1"></i>
+                                    Process Payroll
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-center p-3 bg-amber-50 rounded-lg border">
+                                    <div class="text-xl font-bold text-amber-600" id="pending-payroll-amount">$0.00</div>
+                                    <div class="text-xs text-amber-600">Pending Payroll</div>
+                                </div>
+                                <div class="text-center p-3 bg-green-50 rounded-lg border">
+                                    <div class="text-xl font-bold text-green-600" id="processed-payroll-count">0</div>
+                                    <div class="text-xs text-green-600">Processed Records</div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="text-xs text-muted-foreground" id="payroll-status-message">Loading payroll status...</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Recent Activity -->
                     <div class="card">
                         <div class="card-header">
                             <h3 class="card-title">Recent Services</h3>
                         </div>
                         <div class="card-content">
-                            <div id="recent-services-list" class="space-y-4">
-                                <p class="text-muted-foreground">Loading recent services...</p>
+                            <div id="recent-services-list" class="space-y-2">
+                                <div class="text-muted-foreground text-sm">Loading recent services...</div>
                             </div>
                         </div>
                     </div>
@@ -260,23 +469,12 @@
                         </div>
                         <div class="card-content">
                             <p id="client-loading-message" class="text-muted-foreground">Loading clients...</p>
-                            <div class="overflow-x-auto">
-                                <table id="client-table" class="w-full hidden">
-                                    <thead>
-                                        <tr class="border-b">
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Company Name</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Contact Name</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Email</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Phone</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Client ID</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Status</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="client-table-body" class="divide-y"></tbody>
-                                </table>
+                            <div id="client-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                                <!-- Client cards will be dynamically generated here -->
                             </div>
-                            <p id="no-clients-message" class="text-muted-foreground hidden">No clients found.</p>
+                            <div id="no-clients-message" class="hidden text-center py-8 text-muted-foreground">
+                                No clients found.
+                            </div>
                         </div>
                     </div>
 
@@ -491,6 +689,10 @@
                                         <label for="edit-location-nextServiceTime" class="text-sm font-medium">Next Service Time (Optional):</label>
                                         <input type="time" id="edit-location-nextServiceTime" class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
                                     </div>
+                                    <div class="space-y-2">
+                                        <label for="location-last-service-date" class="text-sm font-medium">Last Service Date:</label>
+                                        <input type="date" id="location-last-service-date" class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                    </div>
                                 </div>
 
                                 <!-- Service Days Selection -->
@@ -519,6 +721,15 @@
                                             <input type="checkbox" name="serviceDay" value="6" class="mr-2"> Sat
                                         </label>
                                     </div>
+                                </div>
+
+                                <!-- Location Status -->
+                                <div>
+                                    <label for="location-status" class="text-sm font-medium">Status:</label>
+                                    <select id="location-status" class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                        <option value="true">Active</option>
+                                        <option value="false">Inactive</option>
+                                    </select>
                                 </div>
 
                                 <div class="flex gap-2 pt-4">
@@ -573,20 +784,11 @@
                         </div>
                         <div class="card-content">
                             <p id="employee-loading-message" class="text-muted-foreground">Loading employees...</p>
-                            <div class="overflow-x-auto">
-                                <table id="employee-table" class="w-full hidden">
-                                    <thead>
-                                        <tr class="border-b">
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Name</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Email</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Phone</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Role</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Status</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="employee-table-body" class="divide-y"></tbody>
-                                </table>
+                            <div id="employee-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                                <!-- Employee cards will be dynamically generated here -->
+                            </div>
+                            <div id="no-employees-message" class="hidden text-center py-8 text-muted-foreground">
+                                No employees found.
                             </div>
                         </div>
                     </div>
@@ -597,7 +799,151 @@
                             <h3 class="card-title">Add New Employee</h3>
                         </div>
                         <div class="card-content">
-                            <div class="text-muted-foreground">Employee form will be loaded here...</div>
+                            <form id="add-employee-form" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="add-employee-name" class="block text-sm font-medium mb-1">Full Name</label>
+                                        <input type="text" id="add-employee-name" required class="w-full px-3 py-2 border border-border rounded-md">
+                                    </div>
+                                    <div>
+                                        <label for="add-employee-email" class="block text-sm font-medium mb-1">Email</label>
+                                        <input type="email" id="add-employee-email" required class="w-full px-3 py-2 border border-border rounded-md">
+                                    </div>
+                                    <div>
+                                        <label for="add-employee-phone" class="block text-sm font-medium mb-1">Phone</label>
+                                        <input type="tel" id="add-employee-phone" class="w-full px-3 py-2 border border-border rounded-md">
+                                    </div>
+                                    <div>
+                                        <label for="add-employee-role" class="block text-sm font-medium mb-1">Role</label>
+                                        <select id="add-employee-role" class="w-full px-3 py-2 border border-border rounded-md">
+                                            <option value="cleaner">Cleaner</option>
+                                            <option value="supervisor">Supervisor</option>
+                                            <option value="manager">Manager</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="btn-primary">Save Employee</button>
+                                    <button type="button" id="cancel-add-employee" class="btn-secondary">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Edit Employee Form (hidden by default) -->
+                    <div id="edit-employee-form-section" class="card hidden">
+                        <div class="card-header">
+                            <h3 class="card-title">Edit Employee</h3>
+                        </div>
+                        <div class="card-content">
+                                                         <form id="edit-employee-form" class="space-y-4">
+                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <div>
+                                         <label for="edit-employee-first-name" class="block text-sm font-medium mb-1">First Name</label>
+                                         <input type="text" id="edit-employee-first-name" required class="w-full px-3 py-2 border border-border rounded-md">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-last-name" class="block text-sm font-medium mb-1">Last Name</label>
+                                         <input type="text" id="edit-employee-last-name" required class="w-full px-3 py-2 border border-border rounded-md">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-email" class="block text-sm font-medium mb-1">Email</label>
+                                         <input type="email" id="edit-employee-email" required class="w-full px-3 py-2 border border-border rounded-md">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-phone" class="block text-sm font-medium mb-1">Phone</label>
+                                         <input type="tel" id="edit-employee-phone" class="w-full px-3 py-2 border border-border rounded-md">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-job-title" class="block text-sm font-medium mb-1">Job Title</label>
+                                         <input type="text" id="edit-employee-job-title" class="w-full px-3 py-2 border border-border rounded-md">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-id-string" class="block text-sm font-medium mb-1">Employee ID</label>
+                                         <input type="text" id="edit-employee-id-string" readonly class="w-full px-3 py-2 border border-border rounded-md bg-gray-50">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-system-id" class="block text-sm font-medium mb-1">System ID</label>
+                                         <input type="text" id="edit-employee-system-id" readonly class="w-full px-3 py-2 border border-border rounded-md bg-gray-50">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-auth-uid" class="block text-sm font-medium mb-1">Auth UID</label>
+                                         <input type="text" id="edit-employee-auth-uid" readonly class="w-full px-3 py-2 border border-border rounded-md bg-gray-50">
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-status" class="block text-sm font-medium mb-1">Status</label>
+                                         <select id="edit-employee-status" class="w-full px-3 py-2 border border-border rounded-md">
+                                             <option value="true">Active</option>
+                                             <option value="false">Inactive</option>
+                                         </select>
+                                     </div>
+                                     <div>
+                                         <label for="edit-employee-role" class="block text-sm font-medium mb-1">Employee Role</label>
+                                         <select id="edit-employee-role" class="w-full px-3 py-2 border border-border rounded-md">
+                                             <option value="employee">Employee</option>
+                                             <option value="admin">Admin</option>
+                                             <option value="manager">Manager</option>
+                                         </select>
+                                         <small class="text-xs text-muted-foreground">Changes employee's system access level</small>
+                                     </div>
+                                 </div>
+                                                                 <div class="flex gap-2">
+                                     <button type="submit" class="btn-primary">Update Employee</button>
+                                     <button type="button" id="cancel-edit-employee" class="btn-secondary">Cancel</button>
+                                 </div>
+                             </form>
+                         </div>
+                     </div>
+
+                    <!-- Employee Password Management -->
+                    <div id="employee-password-section" class="card hidden">
+                        <div class="card-header">
+                            <h3 class="card-title">Password Management</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="employee-new-password" class="block text-sm font-medium mb-1">New Password</label>
+                                    <input type="password" id="employee-new-password" minlength="6" class="w-full px-3 py-2 border border-border rounded-md">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button" id="set-employee-new-password-button" class="btn-primary">Set Password</button>
+                                    <button type="button" id="cancel-employee-password" class="btn-secondary">Cancel</button>
+                                </div>
+                                <div id="employee-password-message" class="text-sm mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Role Management -->
+                    <div id="user-role-management-section" class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Role Management</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="space-y-4">
+                                <input type="hidden" id="role-mgmt-target-uid">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Current Roles</label>
+                                    <div id="current-roles-display" class="p-3 bg-gray-50 rounded border text-sm">
+                                        Loading roles...
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="role-select" class="block text-sm font-medium mb-1">Add Role</label>
+                                    <select id="role-select" class="w-full px-3 py-2 border border-border rounded-md">
+                                        <option value="">Select Role</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="manager">Manager</option>
+                                        <option value="employee">Employee</option>
+                                    </select>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button" id="add-role-button" class="btn-primary">Add Role</button>
+                                    <button type="button" id="remove-role-button" class="btn-destructive">Remove Role</button>
+                                </div>
+                                <div id="role-management-message" class="text-sm mt-2"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -605,9 +951,58 @@
                     <div id="employee-rate-management-section" class="card">
                         <div class="card-header">
                             <h3 class="card-title">Employee Rate Management</h3>
+                            <p class="text-sm text-muted-foreground">Current Employee: <span id="current-employee-name-for-rates">None selected</span></p>
                         </div>
                         <div class="card-content">
-                            <div class="text-muted-foreground">Rate management interface will be loaded here...</div>
+                            <!-- Rate Display Table -->
+                            <div class="mb-6">
+                                <h4 class="text-lg font-medium mb-3">Current Rates</h4>
+                                <div class="overflow-x-auto">
+                                    <table id="employee-rates-table" class="w-full border-collapse">
+                                        <thead>
+                                            <tr class="border-b">
+                                                <th class="text-left p-3 font-medium">Client</th>
+                                                <th class="text-left p-3 font-medium">Rate</th>
+                                                <th class="text-left p-3 font-medium">Effective Date</th>
+                                                <th class="text-left p-3 font-medium">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="employee-rates-table-body">
+                                            <tr>
+                                                <td colspan="4" class="p-4 text-center text-muted-foreground">No rates set for this employee</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Add New Rate Form -->
+                            <div class="border-t pt-6">
+                                <h4 class="text-lg font-medium mb-3">Add New Rate</h4>
+                                <form id="add-employee-rate-form" class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label for="rate-client-select" class="block text-sm font-medium mb-1">Client</label>
+                                            <select id="rate-client-select" required class="w-full px-3 py-2 border border-border rounded-md">
+                                                <option value="">Select Client</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="rate-amount" class="block text-sm font-medium mb-1">Rate ($/hour)</label>
+                                            <input type="number" id="rate-amount" step="0.01" min="0" required class="w-full px-3 py-2 border border-border rounded-md">
+                                        </div>
+                                        <div>
+                                            <label for="rate-effective-date" class="block text-sm font-medium mb-1">Effective Date</label>
+                                            <input type="date" id="rate-effective-date" required class="w-full px-3 py-2 border border-border rounded-md">
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="submit" class="btn-primary">Add Rate</button>
+                                        <button type="button" id="cancel-rate-form" class="btn-secondary">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div id="rate-management-status" class="mt-4 text-sm"></div>
                         </div>
                     </div>
                 </div>
@@ -913,6 +1308,37 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Payroll Adjustment Form -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Payroll Adjustments</h3>
+                        </div>
+                        <div class="card-content">
+                            <form id="add-adjustment-form" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label for="adjustment-employee-select" class="block text-sm font-medium mb-1">Employee</label>
+                                        <select id="adj-employee-select" class="w-full px-3 py-2 border border-border rounded-md">
+                                            <option value="">Select Employee</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="adjustment-amount" class="block text-sm font-medium mb-1">Adjustment Amount</label>
+                                        <input type="number" id="adjustment-amount" step="0.01" class="w-full px-3 py-2 border border-border rounded-md">
+                                    </div>
+                                    <div>
+                                        <label for="adjustment-reason" class="block text-sm font-medium mb-1">Reason</label>
+                                        <input type="text" id="adjustment-reason" placeholder="Reason for adjustment" class="w-full px-3 py-2 border border-border rounded-md">
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="btn-primary">Add Adjustment</button>
+                                    <button type="button" id="cancel-adjustment" class="btn-secondary">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -960,6 +1386,15 @@
                 }, 100);
             }
             
+            if (viewName === 'payroll') {
+                // Initialize payroll view - populate employee dropdown
+                setTimeout(() => {
+                    if (typeof window.populateEmployeeDropdownForAdjustments === 'function') {
+                        window.populateEmployeeDropdownForAdjustments();
+                    }
+                }, 100);
+            }
+            
             // Update navigation styling
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('bg-primary', 'text-primary-foreground');
@@ -974,9 +1409,99 @@
             }
         }
         
-        // Initialize icons when page loads
+        // Sidebar functionality
+        function initializeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            const sidebarCloseMobile = document.getElementById('sidebar-close-mobile');
+            const mainContent = document.getElementById('main-content');
+            
+            let sidebarCollapsed = false;
+            
+            // Desktop sidebar toggle
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebarCollapsed = !sidebarCollapsed;
+                    
+                    if (sidebarCollapsed) {
+                        sidebar.classList.add('sidebar-collapsed');
+                        mainContent.classList.add('main-content-expanded');
+                        sidebarToggle.innerHTML = '<i data-lucide="panel-right" class="h-5 w-5"></i>';
+                        sidebarToggle.title = 'Expand Sidebar';
+                    } else {
+                        sidebar.classList.remove('sidebar-collapsed');
+                        mainContent.classList.remove('main-content-expanded');
+                        sidebarToggle.innerHTML = '<i data-lucide="panel-left" class="h-5 w-5"></i>';
+                        sidebarToggle.title = 'Collapse Sidebar';
+                    }
+                    
+                    lucide.createIcons();
+                    
+                    // Store preference
+                    localStorage.setItem('sidebarCollapsed', sidebarCollapsed);
+                });
+            }
+            
+            // Mobile menu toggle
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    sidebar.classList.add('sidebar-open');
+                    sidebarOverlay.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                });
+            }
+            
+            // Close mobile menu
+            function closeMobileMenu() {
+                sidebar.classList.remove('sidebar-open');
+                sidebarOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            
+            if (sidebarCloseMobile) {
+                sidebarCloseMobile.addEventListener('click', closeMobileMenu);
+            }
+            
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', closeMobileMenu);
+            }
+            
+            // Close mobile menu when clicking nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        closeMobileMenu();
+                    }
+                });
+            });
+            
+            // Restore saved sidebar state on desktop
+            const savedState = localStorage.getItem('sidebarCollapsed');
+            if (savedState === 'true' && window.innerWidth > 768) {
+                sidebarToggle?.click();
+            }
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    closeMobileMenu();
+                } else {
+                    // Reset desktop collapsed state on mobile
+                    if (sidebarCollapsed) {
+                        sidebar.classList.remove('sidebar-collapsed');
+                        mainContent.classList.remove('main-content-expanded');
+                    }
+                }
+            });
+        }
+        
+        // Initialize icons and sidebar when page loads
         document.addEventListener('DOMContentLoaded', function() {
             lucide.createIcons();
+            initializeSidebar();
         });
     </script>
     

@@ -26,8 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const employeeListSection = document.getElementById('employee-list-section');
     const employeeLoadingMessage = document.getElementById('employee-loading-message');
-    const employeeTable = document.getElementById('employee-table');
-    const employeeTableBody = document.getElementById('employee-table-body');
+    const employeeCardsContainer = document.getElementById('employee-cards-container');
     const noEmployeesMessage = document.getElementById('no-employees-message');
 
     // Add Employee Form
@@ -149,12 +148,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (isAdminByClaims || isAdminByRole) {
                             console.log("DEBUG AEMP: Admin access confirmed for Employee Management Page.");
                             
-                            // Store claims on currentAdminUser for later use and show role management if super_admin
-                            if (claims.super_admin === true) {
-                                currentAdminUser.claims = claims;
-                                const roleMgmtSection = document.getElementById('user-role-management-section');
-                                if (roleMgmtSection) roleMgmtSection.style.display = 'block';
-                            }
+                            // Store claims on currentAdminUser for later use and show role management for all admins
+                            currentAdminUser.claims = claims;
+                            const roleMgmtSection = document.getElementById('user-role-management-section');
+                            if (roleMgmtSection) roleMgmtSection.style.display = 'block';
                             
                             setupEventListeners();
                             fetchAndDisplayEmployees(); 
@@ -171,12 +168,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         if(isAdminByClaimsOnly) {
                             console.warn("DEBUG AEMP: Proceeding with admin access based on claims despite Firestore user doc error.");
                             
-                            // Store claims and show role management if super_admin
-                            if (claims.super_admin === true) {
-                                currentAdminUser.claims = claims;
-                                const roleMgmtSection = document.getElementById('user-role-management-section');
-                                if (roleMgmtSection) roleMgmtSection.style.display = 'block';
-                            }
+                            // Store claims and show role management for all admins
+                            currentAdminUser.claims = claims;
+                            const roleMgmtSection = document.getElementById('user-role-management-section');
+                            if (roleMgmtSection) roleMgmtSection.style.display = 'block';
                             
                             setupEventListeners();
                             fetchAndDisplayEmployees(); 
@@ -311,9 +306,9 @@ if (firebase.auth().currentUser) {
             });
         }
 
-        // Delegated listener for employee table actions
-        if (employeeTableBody) {
-            employeeTableBody.addEventListener('click', (event) => {
+        // Delegated listener for employee card actions
+        if (employeeCardsContainer) {
+            employeeCardsContainer.addEventListener('click', (event) => {
                 const target = event.target;
                 const editButton = target.closest('.edit-employee-button');
                 const deleteButton = target.closest('.delete-employee-button');
@@ -368,9 +363,9 @@ if (firebase.auth().currentUser) {
         if (!db) { console.error("DEBUG AEMP: Firestore DB not available."); return; }
 
         if (employeeLoadingMessage) employeeLoadingMessage.style.display = 'block';
-        if (employeeTable) employeeTable.style.display = 'none';
-        if (noEmployeesMessage) noEmployeesMessage.style.display = 'none';
-        if (employeeTableBody) employeeTableBody.innerHTML = '';
+        if (employeeCardsContainer) employeeCardsContainer.classList.add('hidden');
+        if (noEmployeesMessage) noEmployeesMessage.classList.add('hidden');
+        if (employeeCardsContainer) employeeCardsContainer.innerHTML = '';
 
         try {
             const snapshot = await db.collection('employeeMasterList')
@@ -379,36 +374,97 @@ if (firebase.auth().currentUser) {
                                      .get();
             if (employeeLoadingMessage) employeeLoadingMessage.style.display = 'none';
             if (snapshot.empty) {
-                if (noEmployeesMessage) noEmployeesMessage.style.display = 'block';
+                if (noEmployeesMessage) noEmployeesMessage.classList.remove('hidden');
                 return;
             }
             let employeesHtml = '';
             snapshot.forEach(doc => {
                 const emp = doc.data();
                 const employeeId = doc.id;
-                const name = `${escapeHtml(emp.firstName || '')} ${escapeHtml(emp.lastName || '')}`.trim() || 'N/A';
+                const firstName = escapeHtml(emp.firstName || '');
+                const lastName = escapeHtml(emp.lastName || '');
+                const name = `${firstName} ${lastName}`.trim() || 'N/A';
+                const email = escapeHtml(emp.email || 'N/A');
+                const jobTitle = escapeHtml(emp.jobTitle || 'N/A');
+                const phone = escapeHtml(emp.phone || 'N/A');
+                const status = typeof emp.status === 'boolean' ? (emp.status ? 'Active' : 'Inactive') : 'N/A';
+                const statusBadgeClass = emp.status ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                
                 employeesHtml += `
-                    <tr>
-                        <td>${name}</td>
-                        <td>${escapeHtml(emp.email || 'N/A')}</td>
-                        <td>${escapeHtml(emp.jobTitle || 'N/A')}</td>
-                        <td>${escapeHtml(emp.phone || 'N/A')}</td>
-                        <td>${typeof emp.status === 'boolean' ? (emp.status ? 'Active' : 'Inactive') : 'N/A'}</td>
-                        <td>
-                            <button class="edit-employee-button button-small" data-employee-id="${employeeId}">Edit / View Rates</button>
-                            <button class="delete-employee-button button-small button-danger" data-employee-id="${employeeId}" data-employee-name="${name}">Delete</button>
-                        </td>
-                    </tr>
+                    <div class="bg-white border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-semibold text-lg text-foreground">${name}</h4>
+                                <p class="text-sm text-muted-foreground">${jobTitle}</p>
+                            </div>
+                            <div class="flex flex-col gap-1 items-end">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClass}">${status}</span>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800" id="role-badge-${employeeId}">Employee</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="mail" class="h-4 w-4 text-muted-foreground"></i>
+                                <span class="text-muted-foreground">${email}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="phone" class="h-4 w-4 text-muted-foreground"></i>
+                                <span class="text-muted-foreground">${phone}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-4">
+                            <button class="edit-employee-button btn-primary text-xs px-3 py-1 flex-1" data-employee-id="${employeeId}">
+                                <i data-lucide="edit" class="h-3 w-3 mr-1"></i>
+                                Edit & Roles
+                            </button>
+                            <button class="delete-employee-button btn-destructive text-xs px-3 py-1" data-employee-id="${employeeId}" data-employee-name="${name}">
+                                <i data-lucide="trash-2" class="h-3 w-3 mr-1"></i>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
                 `;
             });
-            if (employeeTableBody) employeeTableBody.innerHTML = employeesHtml;
-            if (employeeTable) employeeTable.style.display = 'table';
+            if (employeeCardsContainer) {
+                employeeCardsContainer.innerHTML = employeesHtml;
+                employeeCardsContainer.classList.remove('hidden');
+                // Re-initialize Lucide icons for the new cards
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                
+                // Fetch and display roles for each employee
+                snapshot.forEach(async (doc) => {
+                    const emp = doc.data();
+                    const employeeId = doc.id;
+                    const authUid = emp.authUid;
+                    
+                    if (authUid) {
+                        try {
+                            const userDoc = await db.collection('users').doc(authUid).get();
+                            if (userDoc.exists && userDoc.data().role) {
+                                const role = userDoc.data().role;
+                                const roleBadge = document.getElementById(`role-badge-${employeeId}`);
+                                if (roleBadge) {
+                                    roleBadge.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+                                    // Update badge color based on role
+                                    roleBadge.className = `px-2 py-1 text-xs font-medium rounded-full ${
+                                        role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                        role === 'manager' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-blue-100 text-blue-800'
+                                    }`;
+                                }
+                            }
+                        } catch (error) {
+                            console.warn(`Could not fetch role for employee ${employeeId}:`, error);
+                        }
+                    }
+                });
+            }
         } catch (error) {
             console.error("DEBUG AEMP: Error fetching employees:", error);
             if (employeeLoadingMessage) employeeLoadingMessage.style.display = 'none';
             if (noEmployeesMessage) {
                 noEmployeesMessage.textContent = "Error loading employees: " + error.message;
-                noEmployeesMessage.style.display = 'block';
+                noEmployeesMessage.classList.remove('hidden');
             }
         }
     }
@@ -635,17 +691,70 @@ async function handleEditEmployeeSubmit(event) {
         setFormDisabledState(editEmployeeForm, false);
         return; 
     }
+    // Safely get form values with null checks
+    const firstNameEl = document.getElementById('edit-employee-first-name');
+    const lastNameEl = document.getElementById('edit-employee-last-name');
+    const phoneEl = document.getElementById('edit-employee-phone');
+    const jobTitleEl = document.getElementById('edit-employee-job-title');
+    const statusEl = document.getElementById('edit-employee-status');
+    const roleEl = document.getElementById('edit-employee-role');
+    
+    if (!firstNameEl || !lastNameEl || !phoneEl || !jobTitleEl || !statusEl) {
+        console.error('AEMP ERROR: Missing form elements for employee update');
+        showGeneralMessage(editEmployeeMessageEl, 'Error: Form elements missing. Please refresh the page.', 'error');
+        setFormDisabledState(editEmployeeForm, false);
+        return;
+    }
+    
     const updatedData = {
-        firstName: document.getElementById('edit-employee-first-name').value.trim(),
-        lastName: document.getElementById('edit-employee-last-name').value.trim(),
-        phone: document.getElementById('edit-employee-phone').value.trim(),
-        jobTitle: document.getElementById('edit-employee-job-title').value.trim(),
-        status: document.getElementById('edit-employee-status').value === 'true', // Assuming 'true'/'false' string from select
+        firstName: firstNameEl.value.trim(),
+        lastName: lastNameEl.value.trim(),
+        phone: phoneEl.value.trim(),
+        jobTitle: jobTitleEl.value.trim(),
+        status: statusEl.value === 'true', // Assuming 'true'/'false' string from select
         updatedAt: serverTimestamp() // Uses the global serverTimestamp
     };
+    
+    // Get employee's auth UID for role update
+    const authUidEl = document.getElementById('edit-employee-auth-uid');
+    const authUid = authUidEl ? authUidEl.value.trim() : null;
     try {
         await db.collection('employeeMasterList').doc(employeeId).update(updatedData);
-        showGeneralMessage(editEmployeeMessageEl, 'Employee updated!', 'success');
+        
+        // Update role if role field exists and auth UID is available
+        if (roleEl && authUid && roleEl.value) {
+            try {
+                // Update role in users collection
+                await db.collection('users').doc(authUid).update({
+                    role: roleEl.value,
+                    updatedAt: serverTimestamp()
+                });
+                
+                // Also call cloud function to update custom claims
+                const response = await fetch('https://us-central1-cleveland-clean-portal.cloudfunctions.net/setAdminRole', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${await auth.currentUser.getIdToken()}`
+                    },
+                    body: JSON.stringify({
+                        targetUid: authUid,
+                        role: roleEl.value
+                    })
+                });
+                
+                if (!response.ok) {
+                    console.warn('Failed to update custom claims, but role updated in database');
+                }
+                
+                console.log(`AEMP: Successfully updated role to ${roleEl.value} for employee ${authUid}`);
+            } catch (roleError) {
+                console.warn('Error updating employee role:', roleError);
+                showGeneralMessage(editEmployeeMessageEl, 'Employee updated, but role update failed. Please try again.', 'warning');
+            }
+        }
+        
+        showGeneralMessage(editEmployeeMessageEl, 'Employee updated successfully!', 'success');
         fetchAndDisplayEmployees(); // Refresh list
         setTimeout(() => { 
             showPageSection(employeeMainView); 

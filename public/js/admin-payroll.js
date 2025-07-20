@@ -426,4 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     console.log("DEBUG: Admin Payroll Page script finished initial setup.");
+    
+    // Expose functions globally for access from other scripts
+    window.populateEmployeeDropdownForAdjustments = populateEmployeeDropdownForAdjustments;
 });

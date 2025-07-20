@@ -234,4 +234,85 @@
     /* margin-bottom: 15px; /* Consistent spacing */
 }
         /* Make sure admin-action-button, save-button, cancel-button have good base styles */
+
+/* Additional mobile performance optimizations */
+
+/* Fast touch interactions */
+.nav-item, .btn-primary, .btn-secondary, .btn-destructive, .action-button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* Improve mobile scrolling */
+* {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile form improvements */
+@media (max-width: 768px) {
+    input, select, textarea {
+        font-size: 16px; /* Prevent zoom on iOS */
+        -webkit-appearance: none;
+    }
+    
+    .modal-content {
+        max-width: 95vw;
+        max-height: 95vh;
+        margin: 2.5vh auto;
+    }
+    
+    /* Better button sizes for touch */
+    .btn-primary, .btn-secondary, .btn-destructive {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+    
+    /* Improve table readability on mobile */
+    table {
+        font-size: 14px;
+    }
+    
+    th, td {
+        padding: 8px 12px;
+    }
+    
+    /* Better spacing for mobile cards */
+    .card {
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-content {
+        padding: 16px;
+    }
+    
+    /* Responsive grid adjustments */
+    .grid {
+        gap: 0.75rem;
+    }
+    
+    /* Better mobile navigation */
+    .nav-item {
+        min-height: 48px;
+        font-size: 16px;
+    }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+    .sidebar {
+        width: 200px;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .card {
+        border: 0.5px solid var(--border);
+    }
+}
     

@@ -23,8 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const setClientPasswordBtn = document.getElementById('set-client-new-password-button');
 
     const clientLoadingEl = document.getElementById('client-loading-message');
-    const clientTableEl = document.getElementById('client-table');
-    let clientTableBodyEl = document.getElementById('client-table-body');
+    const clientCardsContainer = document.getElementById('client-cards-container');
     const noClientsEl = document.getElementById('no-clients-message');
 
     const locationsManagementSection = document.getElementById('locations-management-section');
@@ -245,15 +244,15 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("DEBUG: Fetching client list...");
         if(!db) { console.error("DB not initialized for fetchClients"); return; }
         if(clientLoadingEl) clientLoadingEl.style.display = 'block';
-        if(clientTableEl) clientTableEl.style.display = 'none';
-        if(noClientsEl) noClientsEl.style.display = 'none';
+        if(clientCardsContainer) clientCardsContainer.classList.add('hidden');
+        if(noClientsEl) noClientsEl.classList.add('hidden');
 
         db.collection('clientMasterList').orderBy('companyName', 'asc').get()
             .then(snapshot => {
                 if(clientLoadingEl) clientLoadingEl.style.display='none';
                 if(snapshot.empty){
-                    if(noClientsEl) noClientsEl.style.display='block';
-                    if(clientTableBodyEl) clientTableBodyEl.innerHTML = '';
+                    if(noClientsEl) noClientsEl.classList.remove('hidden');
+                    if(clientCardsContainer) clientCardsContainer.innerHTML = '';
                 } else {
                     let clientHtml = '';
                     snapshot.forEach(doc => {
@@ -265,22 +264,51 @@ document.addEventListener('DOMContentLoaded', function() {
                         const phone = client.phone || 'N/A';
                         const displayId = client.clientIdString || uid.substring(0, 8) + '...';
                         const status = typeof client.status === 'boolean' ? (client.status ? 'Active' : 'Inactive') : 'N/A';
-                        clientHtml += `<tr>
-                            <td>${escapeHtml(companyName)}</td>
-                            <td>${escapeHtml(contactName)}</td>
-                            <td>${escapeHtml(email)}</td>
-                            <td>${escapeHtml(phone)}</td>
-                            <td>${escapeHtml(displayId)}</td>
-                            <td>${escapeHtml(status)}</td>
-                            <td>
-                                <button class="edit-button edit-client-button" data-uid="${uid}">Edit</button>
-                                <button class="delete-button delete-user-button" data-profile-id="${uid}" data-name="${escapeHtml(companyName)}" data-role="client">Delete</button>
-                            </td>
-                        </tr>`;
+                        const statusBadgeClass = client.status ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                        
+                        clientHtml += `
+                            <div class="bg-white border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 class="font-semibold text-lg text-foreground">${escapeHtml(companyName)}</h4>
+                                        <p class="text-sm text-muted-foreground">ID: ${escapeHtml(displayId)}</p>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClass}">${status}</span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="user" class="h-4 w-4 text-muted-foreground"></i>
+                                        <span class="text-muted-foreground">${escapeHtml(contactName)}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="mail" class="h-4 w-4 text-muted-foreground"></i>
+                                        <span class="text-muted-foreground">${escapeHtml(email)}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="phone" class="h-4 w-4 text-muted-foreground"></i>
+                                        <span class="text-muted-foreground">${escapeHtml(phone)}</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 mt-4">
+                                    <button class="edit-client-button btn-primary text-xs px-3 py-1 flex-1" data-uid="${uid}">
+                                        <i data-lucide="edit" class="h-3 w-3 mr-1"></i>
+                                        Edit
+                                    </button>
+                                    <button class="delete-user-button btn-destructive text-xs px-3 py-1" data-profile-id="${uid}" data-name="${escapeHtml(companyName)}" data-role="client">
+                                        <i data-lucide="trash-2" class="h-3 w-3 mr-1"></i>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
                     });
-                    if(noClientsEl) noClientsEl.style.display='none';
-                    if(clientTableBodyEl) clientTableBodyEl.innerHTML = clientHtml;
-                    if(clientTableEl) clientTableEl.style.display = 'table';
+                    if(noClientsEl) noClientsEl.classList.add('hidden');
+                    if(clientCardsContainer) {
+                        clientCardsContainer.innerHTML = clientHtml;
+                        clientCardsContainer.classList.remove('hidden');
+                        // Re-initialize Lucide icons for the new cards
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    }
                 }
             })
             .catch(error => {
@@ -1068,11 +1096,8 @@ async function handleEditLocationClick(locationId) {
         if (addEditLocationForm) addEditLocationForm.addEventListener('submit', handleSaveLocationSubmit);
 
         // Clear and re-attach delegated listeners for dynamic tables
-        if (clientTableBodyEl && clientTableBodyEl.parentNode) {
-            const newClientTableBodyEl = clientTableBodyEl.cloneNode(false); // Create a new empty body
-            clientTableBodyEl.parentNode.replaceChild(newClientTableBodyEl, clientTableBodyEl); // Replace old with new
-            clientTableBodyEl = newClientTableBodyEl; // Update reference
-            clientTableBodyEl.addEventListener('click', (event) => {
+        if (clientCardsContainer) {
+            clientCardsContainer.addEventListener('click', (event) => {
                 const editButton = event.target.closest('.edit-client-button');
                 const deleteButton = event.target.closest('.delete-user-button[data-role="client"]');
                 if (editButton) {
@@ -1084,7 +1109,7 @@ async function handleEditLocationClick(locationId) {
                     if (profileId) handleDeleteUserClick(deleteButton, profileId, name, 'client');
                 }
             });
-        } else { console.warn("DEBUG: 'clientTableBodyEl' not found for listener setup.");}
+        } else { console.warn("DEBUG: 'clientCardsContainer' not found for listener setup.");}
 
         if (locationsTableBodyEl && locationsTableBodyEl.parentNode) {
             const newLocationsTableBodyEl = locationsTableBodyEl.cloneNode(false);

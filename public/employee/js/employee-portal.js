@@ -1,6 +1,115 @@
 // public/employee/js/employee-portal.js
 // V6 - Added General Job Notes functionality - May 20, 2025
 
+// Add navigation functionality at the beginning of the file
+
+let currentView = 'dashboard';
+
+// Navigation function
+function showView(viewName) {
+    console.log(`DEBUG EMP: Switching to view: ${viewName}`);
+    
+    // Hide all views
+    document.querySelectorAll('.view-section').forEach(view => {
+        view.classList.add('hidden');
+    });
+    
+    // Show selected view
+    const targetView = document.getElementById(`view-${viewName}`);
+    if (targetView) {
+        targetView.classList.remove('hidden');
+    }
+    
+    // Update navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        item.classList.add('text-muted-foreground', 'hover:bg-secondary');
+        item.classList.remove('bg-primary', 'text-primary-foreground');
+    });
+    
+    const activeNav = document.getElementById(`nav-${viewName}`);
+    if (activeNav) {
+        activeNav.classList.add('active');
+        activeNav.classList.remove('text-muted-foreground', 'hover:bg-secondary');
+        activeNav.classList.add('bg-primary', 'text-primary-foreground');
+    }
+    
+    currentView = viewName;
+    
+    // Re-initialize icons after view change
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+// Update dashboard stats
+function updateDashboardStats() {
+    // Update clock status in dashboard
+    const dashboardClockStatus = document.getElementById('dashboard-clock-status');
+    const dashboardClockIndicator = document.getElementById('dashboard-clock-indicator');
+    const clockStatus = document.getElementById('clock-status');
+    
+    if (dashboardClockStatus && clockStatus) {
+        dashboardClockStatus.textContent = clockStatus.textContent;
+    }
+    
+    if (dashboardClockIndicator) {
+        const clockIndicator = document.getElementById('clock-status-indicator');
+        if (clockIndicator) {
+            dashboardClockIndicator.className = clockIndicator.className;
+        }
+    }
+    
+    // Update location in dashboard
+    const dashboardLocation = document.getElementById('dashboard-location');
+    const locationSelect = document.getElementById('location-select-input');
+    if (dashboardLocation && locationSelect && locationSelect.value) {
+        const selectedOption = locationSelect.options[locationSelect.selectedIndex];
+        dashboardLocation.textContent = selectedOption.text;
+    }
+    
+    // Update photos count
+    const dashboardPhotosCount = document.getElementById('dashboard-photos-count');
+    const photosContainer = document.getElementById('my-uploaded-photos-container');
+    if (dashboardPhotosCount && photosContainer) {
+        const photoCount = photosContainer.children.length;
+        dashboardPhotosCount.textContent = photoCount + ' photos';
+    }
+}
+
+// Make showView globally available
+window.showView = showView;
+
+// Add to existing auth state handler - update employee name in sidebar
+function updateEmployeeName(name) {
+    const sidebarName = document.getElementById('employee-name-sidebar');
+    if (sidebarName) {
+        sidebarName.textContent = name;
+    }
+}
+
+// Add navigation listeners
+function setupNavigation() {
+    const navItems = [
+        { id: 'nav-dashboard', view: 'dashboard' },
+        { id: 'nav-clock', view: 'clock' },
+        { id: 'nav-photos', view: 'photos' },
+        { id: 'nav-uploads', view: 'uploads' },
+        { id: 'nav-notes', view: 'notes' },
+        { id: 'nav-payroll', view: 'payroll' },
+        { id: 'nav-settings', view: 'settings' }
+    ];
+    
+    navItems.forEach(({ id, view }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('click', () => showView(view));
+        }
+    });
+}
+
+// Call setupNavigation after other listeners are attached
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DEBUG EMP: Employee Dashboard script running (V6 - General Job Notes).");
 
@@ -36,9 +145,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadProgressEl = document.getElementById('upload-progress');
     const uploadMessageEl = document.getElementById('upload-message');
     const payrollLoadingMessageEl = document.getElementById('payroll-loading-message');
-    const payrollTableEl = document.getElementById('payroll-table');
-    const payrollTableBodyEl = document.getElementById('payroll-table-body');
+    const payrollCardsContainer = document.getElementById('payroll-cards-container');
     const noPayrollMessageEl = document.getElementById('no-payroll-message');
+    const clockStatusIndicator = document.getElementById('clock-status-indicator');
     const changePasswordForm = document.getElementById('change-password-form');
     const currentPasswordInput = document.getElementById('current-password');
     const newPasswordInput = document.getElementById('new-password');
@@ -73,13 +182,42 @@ document.addEventListener('DOMContentLoaded', function() {
     function showPasswordMessage(m,t='error'){if(passwordMessageEl){passwordMessageEl.textContent=m;passwordMessageEl.className=`form-message ${t}`; passwordMessageEl.style.display = m ? 'block' : 'none';}}
     function showJobNotesMessage(m,t='info'){if(jobNotesMessageEl){jobNotesMessageEl.textContent=m; jobNotesMessageEl.className=`form-message ${t}`; jobNotesMessageEl.style.display = m ? 'block' : 'none';}if(t==='error')console.error("EMP Job Notes Msg:",m);else console.log(`EMP Job Notes Msg (${t}): ${m}`);}
    
+    function updateClockStatus(status) {
+        console.log(`DEBUG EMP: updateClockStatus called with status: ${status}`);
+        if (clockStatusEl) clockStatusEl.textContent = status;
+        
+        // Update status indicator color
+        const clockStatusIndicator = document.getElementById('clock-status-indicator');
+        if (clockStatusIndicator) {
+            if (status.toLowerCase().includes('clocked in')) {
+                clockStatusIndicator.className = 'h-3 w-3 rounded-full bg-green-500';
+            } else if (status.toLowerCase().includes('clocked out')) {
+                clockStatusIndicator.className = 'h-3 w-3 rounded-full bg-red-500';
+            } else {
+                clockStatusIndicator.className = 'h-3 w-3 rounded-full bg-gray-400';
+            }
+        }
+    }
+
     function updateClockUI(isClockedIn, statusText = "Loading...") {
         try {
-            if(clockStatusEl) clockStatusEl.textContent = statusText;
-            if(clockInButton) clockInButton.style.display = isClockedIn ? 'none' : 'inline-block';
-            if(clockOutButton) clockOutButton.style.display = isClockedIn ? 'inline-block' : 'none';
+            updateClockStatus(statusText);
+            if(clockInButton) {
+                if (isClockedIn) {
+                    clockInButton.classList.add('hidden');
+                } else {
+                    clockInButton.classList.remove('hidden');
+                }
+            }
+            if(clockOutButton) {
+                if (isClockedIn) {
+                    clockOutButton.classList.remove('hidden');
+                } else {
+                    clockOutButton.classList.add('hidden');
+                }
+            }
             if(clockMessageEl && !clockMessageEl.classList.contains('error') && !clockMessageEl.classList.contains('success')) {
-                 clockMessageEl.textContent = ''; clockMessageEl.style.display = 'none';
+                 clockMessageEl.textContent = '';
             }
             setClockButtonsDisabled(false); 
             if(locationSelectInput) locationSelectInput.disabled = isClockedIn;
@@ -116,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
           })
           .catch(error => { if(locationSelectInput) locationSelectInput.innerHTML = '<option value="">Error loading</option>'; showUploadMessage("Error loading locations.", 'error'); })
           .finally(() => { 
-              const isClockedIn = clockOutButton && clockOutButton.style.display !== 'none' && !clockOutButton.disabled; 
+              const isClockedIn = clockOutButton && !clockOutButton.classList.contains('hidden') && !clockOutButton.disabled; 
               if(locationSelectInput) locationSelectInput.disabled = isClockedIn; 
             });
     }
@@ -346,44 +484,92 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchPayrollData() {
         if (!currentEmployeeProfileId || !db) return; 
-        if (payrollLoadingMessageEl) payrollLoadingMessageEl.style.display = 'block'; 
-        if (payrollTableEl) payrollTableEl.style.display = 'none';
-        if (noPayrollMessageEl) noPayrollMessageEl.style.display = 'none';
-        if (payrollTableBodyEl) payrollTableBodyEl.innerHTML = '';
+        if (payrollLoadingMessageEl) payrollLoadingMessageEl.classList.remove('hidden');
+        if (payrollCardsContainer) payrollCardsContainer.classList.add('hidden');
+        if (noPayrollMessageEl) noPayrollMessageEl.classList.add('hidden');
+        if (payrollCardsContainer) payrollCardsContainer.innerHTML = '';
+        
         db.collection('employeePayroll').where('employeeProfileId', '==', currentEmployeeProfileId).orderBy('paymentDate', 'desc').limit(10).get()
           .then(payrollSnapshot => {
-              if (payrollLoadingMessageEl) payrollLoadingMessageEl.style.display = 'none';
+              if (payrollLoadingMessageEl) payrollLoadingMessageEl.classList.add('hidden');
               if (payrollSnapshot.empty) { 
-                  if (noPayrollMessageEl) noPayrollMessageEl.style.display = 'block';
+                  if (noPayrollMessageEl) noPayrollMessageEl.classList.remove('hidden');
               } else { 
                   let payrollHtml = '';
                   payrollSnapshot.forEach(payrollDoc => {
                       const data = payrollDoc.data(); 
-                      payrollHtml += `<tr><td>${formatFirestoreTimestamp(data.payPeriodStartDate)} - ${formatFirestoreTimestamp(data.payPeriodEndDate)}</td><td>${formatFirestoreTimestamp(data.paymentDate)}</td><td>${formatCurrency(data.netPay)}</td><td>${escapeHtml(data.status || 'N/A')}</td></tr>`;
+                      const payPeriod = `${formatFirestoreTimestamp(data.payPeriodStartDate)} - ${formatFirestoreTimestamp(data.payPeriodEndDate)}`;
+                      const paymentDate = formatFirestoreTimestamp(data.paymentDate);
+                      const netPay = formatCurrency(data.netPay);
+                      const status = escapeHtml(data.status || 'Processing');
+                      
+                      const statusBadgeClass = status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                              status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
+                                              'bg-gray-100 text-gray-800';
+                      
+                      payrollHtml += `
+                          <div class="bg-white border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+                              <div class="flex justify-between items-start mb-3">
+                                  <div>
+                                      <h4 class="font-semibold text-foreground">${payPeriod}</h4>
+                                      <p class="text-sm text-muted-foreground">Pay Period</p>
+                                  </div>
+                                  <span class="px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClass}">${status}</span>
+                              </div>
+                              <div class="space-y-2 text-sm">
+                                  <div class="flex items-center justify-between">
+                                      <div class="flex items-center gap-2">
+                                          <i data-lucide="calendar" class="h-4 w-4 text-muted-foreground"></i>
+                                          <span class="text-muted-foreground">Payment Date:</span>
+                                      </div>
+                                      <span class="font-medium">${paymentDate}</span>
+                                  </div>
+                                  <div class="flex items-center justify-between">
+                                      <div class="flex items-center gap-2">
+                                          <i data-lucide="dollar-sign" class="h-4 w-4 text-muted-foreground"></i>
+                                          <span class="text-muted-foreground">Net Pay:</span>
+                                      </div>
+                                      <span class="font-medium text-green-600">${netPay}</span>
+                                  </div>
+                              </div>
+                          </div>
+                      `;
                   });
-                  if (noPayrollMessageEl) noPayrollMessageEl.style.display = 'none'; 
-                  if (payrollTableBodyEl) payrollTableBodyEl.innerHTML = payrollHtml; 
-                  if (payrollTableEl) payrollTableEl.style.display = 'table';
+                  if (noPayrollMessageEl) noPayrollMessageEl.classList.add('hidden'); 
+                  if (payrollCardsContainer) {
+                      payrollCardsContainer.innerHTML = payrollHtml; 
+                      payrollCardsContainer.classList.remove('hidden');
+                      // Re-initialize Lucide icons for the new payroll cards
+                      if (typeof lucide !== 'undefined') lucide.createIcons();
+                  }
               }
           }).catch(error => { 
-              if (payrollLoadingMessageEl) { payrollLoadingMessageEl.textContent = 'Error loading payroll.'; payrollLoadingMessageEl.classList.add('error'); payrollLoadingMessageEl.style.display = 'block';}
+              if (payrollLoadingMessageEl) payrollLoadingMessageEl.classList.add('hidden');
+              if (noPayrollMessageEl) {
+                  noPayrollMessageEl.innerHTML = `
+                      <i data-lucide="alert-circle" class="h-12 w-12 text-red-500 mx-auto mb-3"></i>
+                      <p class="text-red-600">Error loading payroll: ${error.message}</p>
+                  `;
+                  noPayrollMessageEl.classList.remove('hidden');
+                  if (typeof lucide !== 'undefined') lucide.createIcons();
+              }
           });
     }
 
     async function fetchAndDisplayMyUploadedPhotos() {
         if (!currentEmployeeProfileId || !db) {
             console.log("DEBUG EMP: Cannot fetch 'My Uploads' - Employee ID or DB missing.");
-            if (myUploadsLoadingMessage) myUploadsLoadingMessage.style.display = 'none';
+            if (myUploadsLoadingMessage) myUploadsLoadingMessage.classList.add('hidden');
             if (noMyUploadsMessage) {
                 noMyUploadsMessage.textContent = "Could not load your uploads: User information missing.";
-                noMyUploadsMessage.style.display = 'block';
+                noMyUploadsMessage.classList.remove('hidden');
             }
             return;
         }
         console.log("DEBUG EMP: Fetching 'My Recent Uploads (Today)' for employee:", currentEmployeeProfileId);
 
-        if (myUploadsLoadingMessage) myUploadsLoadingMessage.style.display = 'block';
-        if (noMyUploadsMessage) noMyUploadsMessage.style.display = 'none';
+        if (myUploadsLoadingMessage) myUploadsLoadingMessage.classList.remove('hidden');
+        if (noMyUploadsMessage) noMyUploadsMessage.classList.add('hidden');
         if (myUploadedPhotosContainer) myUploadedPhotosContainer.innerHTML = '';
 
         try {
@@ -403,12 +589,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 .orderBy('uploadedAt', 'desc')
                 .get();
 
-            if (myUploadsLoadingMessage) myUploadsLoadingMessage.style.display = 'none';
+            if (myUploadsLoadingMessage) myUploadsLoadingMessage.classList.add('hidden');
 
             if (snapshot.empty) {
                 if (noMyUploadsMessage) {
-                    noMyUploadsMessage.textContent = "You have not uploaded any photos today.";
-                    noMyUploadsMessage.style.display = 'block';
+                    noMyUploadsMessage.classList.remove('hidden');
                 }
                 console.log("DEBUG EMP: No photos found for this employee uploaded today.");
                 return;
@@ -418,31 +603,44 @@ document.addEventListener('DOMContentLoaded', function() {
             snapshot.forEach(doc => {
                 const photo = doc.data();
                 photosHtml += `
-                    <div class="my-photo-item">
-                        <img src="${escapeHtml(photo.photoUrl)}" alt="Uploaded by ${escapeHtml(photo.employeeName || 'you')} for ${escapeHtml(photo.locationName || 'location')}" data-full-url="${escapeHtml(photo.photoUrl)}">
-                        <p class="photo-meta"><strong>Location:</strong> ${escapeHtml(photo.locationName || 'N/A')}</p>
-                        <p class="photo-meta"><strong>Uploaded:</strong> ${formatFirestoreTimestamp(photo.uploadedAt)}</p>
-                        ${photo.notes ? `<p class="photo-notes"><strong>Notes:</strong> ${escapeHtml(photo.notes)}</p>` : ''}
+                    <div class="photo-item">
+                        <img src="${escapeHtml(photo.photoUrl)}" alt="Uploaded by ${escapeHtml(photo.employeeName || 'you')} for ${escapeHtml(photo.locationName || 'location')}" onclick="window.open('${escapeHtml(photo.photoUrl)}', '_blank');">
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="clock" class="h-4 w-4 text-muted-foreground"></i>
+                                <span class="text-muted-foreground">${formatFirestoreTimestamp(photo.uploadedAt)}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="map-pin" class="h-4 w-4 text-muted-foreground"></i>
+                                <span class="text-muted-foreground">${escapeHtml(photo.locationName || 'Unknown')}</span>
+                            </div>
+                            ${photo.notes ? `
+                                <div class="flex items-start gap-2">
+                                    <i data-lucide="sticky-note" class="h-4 w-4 text-muted-foreground mt-0.5"></i>
+                                    <span class="text-muted-foreground text-xs italic">${escapeHtml(photo.notes)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
             });
             if (myUploadedPhotosContainer) {
                 myUploadedPhotosContainer.innerHTML = photosHtml;
-                myUploadedPhotosContainer.querySelectorAll('.my-photo-item img').forEach(img => {
-                    img.addEventListener('click', (e) => {
-                        const fullUrl = e.target.dataset.fullUrl;
-                        if (fullUrl) window.open(fullUrl, '_blank');
-                    });
-                });
+                // Re-initialize Lucide icons for the new photo cards
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
             console.log(`DEBUG EMP: Displayed ${snapshot.size} photos from today.`);
 
         } catch (error) {
             console.error("DEBUG EMP: Error fetching 'My Uploaded Photos':", error);
-            if (myUploadsLoadingMessage) myUploadsLoadingMessage.style.display = 'none';
+            if (myUploadsLoadingMessage) myUploadsLoadingMessage.classList.add('hidden');
             if (noMyUploadsMessage) {
-                noMyUploadsMessage.textContent = "Error loading your uploaded photos.";
-                noMyUploadsMessage.style.display = 'block';
+                noMyUploadsMessage.innerHTML = `
+                    <i data-lucide="alert-circle" class="h-12 w-12 text-red-500 mx-auto mb-3"></i>
+                    <p class="text-red-600">Error loading your uploaded photos.</p>
+                `;
+                noMyUploadsMessage.classList.remove('hidden');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         }
     }
@@ -548,7 +746,12 @@ document.addEventListener('DOMContentLoaded', function() {
                               if (profileDoc.exists) {
                                   const p = profileDoc.data(); 
                                   currentEmployeeName = `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Employee';
+                                  updateEmployeeName(currentEmployeeName); // Update sidebar name
                                   if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome, ${currentEmployeeName}!`;
+                                  
+                                  // Hide loading and show content
+                                  const loadingEl = document.getElementById('employee-loading-message');
+                                  if (loadingEl) loadingEl.style.display = 'none';
                                   if (dashboardContentEl) dashboardContentEl.style.display = 'block';
                                   
                                   // Initialize page functions
@@ -556,11 +759,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                   fetchPayrollData(); 
                                   populateLocationDropdown();
                                   fetchAndDisplayMyUploadedPhotos(); 
+                                  updateDashboardStats(); // Update dashboard stats
                                   
                                   if (!window.employeePortalListenersAttached) {
                                       attachAllListeners();
+                                      setupNavigation();
                                       window.employeePortalListenersAttached = true;
                                   }
+                                  
+                                  // Update dashboard stats periodically
+                                  setTimeout(updateDashboardStats, 1000);
+                                  setInterval(updateDashboardStats, 30000); // Update every 30 seconds
+                                  setupNavigation(); // Setup navigation listeners
                               } else { 
                                   redirectToLogin("Employee profile not found."); 
                               }
@@ -595,10 +805,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }).catch((error) => {
                 console.error("DEBUG EMP: Error getting user data from Firestore.", error);
+                const loadingEl = document.getElementById('employee-loading-message');
+                if (loadingEl) loadingEl.style.display = 'none';
                 redirectToLogin("Error getting user data.");
             });
         } else { 
             // No user signed in
+            const loadingEl = document.getElementById('employee-loading-message');
+            if (loadingEl) loadingEl.style.display = 'none';
             if (dashboardContentEl) dashboardContentEl.style.display = 'none';
             if (welcomeMessageEl) welcomeMessageEl.textContent = 'Please log in.';
             if (goToAdminPortalLink) { // Ensure link is hidden if no user
