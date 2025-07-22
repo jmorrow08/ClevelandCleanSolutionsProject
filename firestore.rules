@@ -133,15 +133,15 @@ service cloud.firestore {
                get(/databases/$(database)/documents/clientMasterList/$(get(/databases/$(database)/documents/locations/$(resource.data.locationId)).data.clientProfileId)).data.email == request.auth.token.email;
       }
 
-      allow read: if hasClaim('admin') || hasClaim('client') ||
+      allow read: if hasClaim('admin') || isOwner() || hasClaim('client') ||
                      (hasClaim('employee') && isPhotoOwner()) ||
                      (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner()) ||
                      (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'client')) ||
                      isPhotoClientByEmail();
-      allow update: if hasClaim('admin') ||
+      allow update: if hasClaim('admin') || isOwner() ||
                        (hasClaim('employee') && isPhotoOwner() && employeeCanUpdatePhotoNotes()) ||
                        (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner() && employeeCanUpdatePhotoNotes());
-      allow delete: if hasClaim('admin') ||
+      allow delete: if hasClaim('admin') || isOwner() ||
                        (hasClaim('employee') && isPhotoOwner()) ||
                        (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner());
     }
@@ -188,13 +188,13 @@ match /employeeTimeTracking/{entryDocId} {
            request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUpdateKeys);
   }
 
-  allow read: if hasClaim('admin') ||
+  allow read: if hasClaim('admin') || isOwner() ||
                 (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isTimeEntryOwner());
 
-  allow create: if isValidTimeEntryDataForCreate(request.resource.data);
+  allow create: if hasClaim('admin') || isOwner() || isValidTimeEntryDataForCreate(request.resource.data);
 
   // Allow admin to update anything. Allow employee to update ONLY for clocking out.
-  allow update: if hasClaim('admin') || employeeCanClockOut(request.resource.data);
+  allow update: if hasClaim('admin') || isOwner() || employeeCanClockOut(request.resource.data);
 
   allow delete: if false; // Or if hasClaim('admin') if needed
 }
