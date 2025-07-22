@@ -84,7 +84,7 @@ exports.setAdminRole = functions
   .https.onCall(async (data, context) => {
     functions.logger.info(
       "setAdminRole (v1.2) invoked by UID:",
-      context.auth ? context.auth.uid : "No auth context"
+      context.auth ? context.auth.uid : "No auth context",
     );
 
     if (!(context.auth && context.auth.token && context.auth.token.super_admin === true)) {
