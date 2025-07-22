@@ -84,10 +84,9 @@ exports.setAdminRole = functions
   .https.onCall(async (data, context) => {
     functions.logger.info("setAdminRole (v1.2) invoked by UID:", context.auth ? context.auth.uid : "No auth context");
     
-    const callerUid = context.auth ? context.auth.uid : null;
     if (!(context.auth && context.auth.token && context.auth.token.super_admin === true)) {
       functions.logger.error("setAdminRole: PERMISSION DENIED. Caller is not a super_admin.");
-      throw new functions.https.HttpsError("permission-denied", "You do not have permission to set admin roles. Must be a super_admin.");
+      throw new functions.https.HttpsError("permission-denied", "You do not have permission to set admin roles.");
     }
 
     if (!data || !data.data || typeof data.data !== "object") {
@@ -106,18 +105,14 @@ exports.setAdminRole = functions
     }
 
     try {
-      functions.logger.info(`Attempting to set role for target UID: ${targetUid} to: ${roleToSet}`);
+      functions.logger.info(`Setting role for target UID: ${targetUid} to: ${roleToSet}`);
       const userDocRef = db.collection("users").doc(targetUid);
       const userDocSnapshot = await userDocRef.get();
-      let currentFirestoreUserRole = null;
-      if (userDocSnapshot.exists) {
-        currentFirestoreUserRole = userDocSnapshot.data().role;
-      }
+      const firestoreUpdateData = { updatedAt: admin.firestore.Timestamp.fromDate(new Date()) };
 
       const targetUserAuthRecord = await admin.auth().getUser(targetUid);
       const currentAuthClaims = targetUserAuthRecord.customClaims || {};
       const newClaims = { ...currentAuthClaims };
-      const firestoreUpdateData = { updatedAt: admin.firestore.Timestamp.fromDate(new Date()) };
 
       // Reset all claims first
       newClaims.admin = false;
@@ -128,7 +123,6 @@ exports.setAdminRole = functions
       if (roleToSet === "owner") {
         newClaims.admin = true;
         newClaims.owner = true;
-        newClaims.super_admin = true; // Owner has all privileges
         firestoreUpdateData.role = "owner";
       } else if (roleToSet === "super_admin") {
         newClaims.admin = true;
@@ -152,7 +146,7 @@ exports.setAdminRole = functions
       return {
         success: true,
         message: `Role successfully set to ${roleToSet}`,
-        claims: newClaims
+        claims: newClaims,
       };
 
     } catch (error) {
