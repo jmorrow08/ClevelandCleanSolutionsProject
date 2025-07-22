@@ -12,11 +12,11 @@
     <!-- Lucide Icons for modern interface -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js"></script>
+    <!-- Firebase SDK v8 (Compatible with existing config) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     
     <style>
          .action-card {
@@ -37,6 +37,59 @@
          .service-progress-bar {
              @apply bg-primary h-2 rounded-full transition-all;
          }
+         
+         /* Mobile-friendly sidebar styles */
+         .sidebar {
+             transition: transform 0.3s ease;
+         }
+         
+         /* Mobile overlay */
+         .sidebar-overlay {
+             position: fixed;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             background-color: rgba(0, 0, 0, 0.5);
+             z-index: 40;
+             display: none;
+         }
+         
+         /* Mobile responsive */
+         @media (max-width: 768px) {
+             .sidebar {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 height: 100vh;
+                 transform: translateX(-100%);
+                 z-index: 50;
+             }
+             
+             .sidebar-open {
+                 transform: translateX(0);
+             }
+             
+             .main-content {
+                 margin-left: 0 !important;
+                 width: 100%;
+             }
+             
+             .sidebar-overlay.active {
+                 display: block;
+             }
+             
+             .mobile-menu-button {
+                 display: block;
+             }
+         }
+         
+         /* Desktop */
+         @media (min-width: 769px) {
+             .mobile-menu-button {
+                 display: none;
+             }
+         }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50 font-sans">
@@ -50,9 +103,17 @@
 
     <!-- Main Client Dashboard -->
     <div id="client-dashboard-content" class="min-h-screen bg-background" style="display: none;">
+        <!-- Mobile overlay -->
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+        
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-button" class="mobile-menu-button fixed top-4 right-4 z-60 p-4 bg-white rounded-lg shadow-lg border border-border md:hidden">
+            <i data-lucide="menu" class="h-7 w-7"></i>
+        </button>
+        
         <div class="flex">
             <!-- Sidebar -->
-            <div class="w-64 bg-white shadow-lg border-r border-border">
+            <div id="sidebar" class="sidebar w-64 bg-white shadow-lg border-r border-border">
                 <div class="p-6">
                     <h1 class="text-xl font-bold text-foreground">Client Portal</h1>
                     <p class="text-sm text-muted-foreground" id="client-name-sidebar">Loading...</p>
@@ -92,10 +153,10 @@
             </div>
 
             <!-- Main Content -->
-            <div class="flex-1 p-8">
+            <div class="main-content flex-1 p-8 md:ml-0">
                 <!-- Dashboard View -->
                 <div id="view-dashboard" class="view-section">
-                    <div class="mb-6">
+                    <div class="mb-6 mt-4 md:mt-0">
                         <h1 id="welcome-message" class="text-3xl font-bold text-foreground">Welcome, Client!</h1>
                         <p class="text-muted-foreground">Your cleaning service dashboard</p>
                     </div>

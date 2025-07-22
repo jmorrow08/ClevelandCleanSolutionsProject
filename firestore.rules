@@ -46,13 +46,21 @@ service cloud.firestore {
                request.resource.data.phone is string &&
                request.resource.data.updatedAt is timestamp &&
                request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys);
-      } // REMOVED ; from end of function block
+      }
 
-      // Allow reading for login flow without requiring custom claims initially
-      allow read: if hasClaim('admin') || (hasClaim('client') && isProfileOwner(clientDocId)) || isProfileOwner(clientDocId);
+      function isClientEmailMatch() {
+        return isLoggedIn() && request.auth.token.email == resource.data.email;
+      }
+
+      // Allow reading for clients by email match or profile ownership
+      allow read: if hasClaim('admin') || 
+                     (hasClaim('client') && isProfileOwner(clientDocId)) || 
+                     isProfileOwner(clientDocId) ||
+                     isClientEmailMatch();
       allow create: if hasClaim('admin');
       allow update: if hasClaim('admin') ||
-                       (hasClaim('client') && isProfileOwner(clientDocId) && clientCanUpdateProfileFields());
+                       (hasClaim('client') && isProfileOwner(clientDocId) && clientCanUpdateProfileFields()) ||
+                       (isClientEmailMatch() && clientCanUpdateProfileFields());
       allow delete: if hasClaim('admin');
     }
 
@@ -78,7 +86,13 @@ match /employeeMasterList/{employeeDocId} {
 
     // --- locations Collection Rules ---
     match /locations/{locationDocId} {
-      allow read: if isLoggedIn();
+      function isLocationClient() {
+        return isLoggedIn() && 
+               exists(/databases/$(database)/documents/clientMasterList/$(resource.data.clientProfileId)) &&
+               get(/databases/$(database)/documents/clientMasterList/$(resource.data.clientProfileId)).data.email == request.auth.token.email;
+      }
+
+      allow read: if hasClaim('admin') || isLocationClient() || isLoggedIn();
       allow create, update, delete: if hasClaim('admin');
     }
 
@@ -107,10 +121,18 @@ match /employeeMasterList/{employeeDocId} {
       }
 
       allow create: if isValidPhotoData(request.resource.data);
+      function isPhotoClientByEmail() {
+        return isLoggedIn() && 
+               exists(/databases/$(database)/documents/locations/$(resource.data.locationId)) &&
+               exists(/databases/$(database)/documents/clientMasterList/$(get(/databases/$(database)/documents/locations/$(resource.data.locationId)).data.clientProfileId)) &&
+               get(/databases/$(database)/documents/clientMasterList/$(get(/databases/$(database)/documents/locations/$(resource.data.locationId)).data.clientProfileId)).data.email == request.auth.token.email;
+      }
+
       allow read: if hasClaim('admin') || hasClaim('client') ||
                      (hasClaim('employee') && isPhotoOwner()) ||
                      (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner()) ||
-                     (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'client'));
+                     (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'client')) ||
+                     isPhotoClientByEmail();
       allow update: if hasClaim('admin') ||
                        (hasClaim('employee') && isPhotoOwner() && employeeCanUpdatePhotoNotes()) ||
                        (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isPhotoOwner() && employeeCanUpdatePhotoNotes());
@@ -187,10 +209,12 @@ match /employeeTimeTracking/{entryDocId} {
       function isJobClient() {
         let userDocData = getUserData(request.auth.uid);
         return isLoggedIn() &&
-               userDocData != null &&
-               userDocData.profileId == resource.data.clientProfileId &&
-               ((hasClaim('client')) || (hasRoleInFirestore(request.auth.uid, 'client')));
-      } // REMOVED ; from end of function block
+               ((userDocData != null &&
+                 userDocData.profileId == resource.data.clientProfileId &&
+                 ((hasClaim('client')) || (hasRoleInFirestore(request.auth.uid, 'client')))) ||
+                (exists(/databases/$(database)/documents/clientMasterList/$(resource.data.clientProfileId)) &&
+                 get(/databases/$(database)/documents/clientMasterList/$(resource.data.clientProfileId)).data.email == request.auth.token.email));
+      }
 
       function isValidServiceHistoryData(jobData) {
         return jobData.clientProfileId is string && jobData.clientProfileId != '' &&

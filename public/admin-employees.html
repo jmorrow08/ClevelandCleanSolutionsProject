@@ -184,6 +184,7 @@
                                 <option value="false">Inactive</option>
                             </select>
                         </div>
+                        <!-- Role management removed: roles are managed in Firebase directly -->
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="save-button">Save Employee Changes</button>
@@ -231,28 +232,7 @@
                     <p id="no-employee-rates-message" class="empty-state-message" style="display: none;">No specific rates found.</p>
                 </div>
 
-                <div id="user-role-management-section" style="display: none;"> {/* Initially hidden; JS will show for super_admin */}
-                    <h4>Set/Update Admin Privileges for <span id="current-employee-name-for-role">this User</span></h4>
-                    <p><small><i>Use this section to grant or revoke admin access. This applies to the user associated with the Auth UID below.</i></small></p>
-                    <form id="set-user-role-form">
-                        <div class="form-group">
-                            <label for="role-mgmt-target-uid">User Auth UID (Read-only):</label>
-                            <input type="text" id="role-mgmt-target-uid" readonly style="background-color: #e9ecef;">
-                        </div>
-                        <div class="form-group">
-                            <label for="role-mgmt-role-select">Select New Role:</label>
-                            <select id="role-mgmt-role-select">
-                                <option value="employee">Employee (No Admin Privileges)</option>
-                                <option value="standard_admin">Standard Admin</option>
-                                <option value="super_admin">Super Admin</option>
-                                </select>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" id="set-user-role-button" class="admin-action-button save-button">Set User Role</button>
-                        </div>
-                    </form>
-                    <div id="set-user-role-message" class="form-message" style="margin-top: 10px;"></div>
-                </div>
+
                 </div> 
         </main>
 

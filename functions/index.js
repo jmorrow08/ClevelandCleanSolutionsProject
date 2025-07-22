@@ -16,7 +16,7 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 // const timezone = "America/New_York"; // Not used by current active functions
-const serverTimestamp = FieldValue.serverTimestamp; // Replaced with admin.firestore.Timestamp.now() in createNewUser_v1
+// serverTimestamp removed - using FieldValue.serverTimestamp() directly
 
 // --- Helper Function: Verify ID Token and Admin Claim (for onRequest) ---
 const verifyTokenAndAdmin = async (req) => {
@@ -115,7 +115,7 @@ exports.setAdminRole = functions
     if (!targetUid || typeof targetUid !== "string" || targetUid.trim() === "") {
       throw new functions.https.HttpsError("invalid-argument", "targetUid (in data.data) must be a non-empty string.");
     }
-    const validRoles = ["super_admin", "standard_admin", "employee", "client", "none_admin"];
+    const validRoles = ["super_admin", "admin", "employee", "client", "none_admin"];
     if (!roleToSet || !validRoles.includes(roleToSet)) {
       throw new functions.https.HttpsError("invalid-argument", `roleToSet (in data.data) must be one of: ${validRoles.join(", ")}.`);
     }
@@ -139,26 +139,26 @@ exports.setAdminRole = functions
 
       const targetUserAuthRecord = await admin.auth().getUser(targetUid);
       const currentAuthClaims = targetUserAuthRecord.customClaims || {};
-      const newClaims = { ...currentAuthClaims, admin: false, super_admin: false, standard_admin: false };
+      const newClaims = { ...currentAuthClaims, admin: false, super_admin: false };
       const firestoreUpdateData = { updatedAt: admin.firestore.Timestamp.fromDate(new Date()) };
       let newFirestoreRole = null;
 
       if (roleToSet === "super_admin") {
         newClaims.admin = true; newClaims.super_admin = true;
         newFirestoreRole = "super_admin";
-      } else if (roleToSet === "standard_admin") {
-        newClaims.admin = true; newClaims.standard_admin = true; newClaims.super_admin = false;
+      } else if (roleToSet === "admin") {
+        newClaims.admin = true; newClaims.super_admin = false;
         if (currentFirestoreUserRole === "employee") {
           newFirestoreRole = "employee";
-          functions.logger.info(`User ${targetUid} is an employee. Granting 'standard_admin' claims but keeping Firestore users.role as 'employee'.`);
+          functions.logger.info(`User ${targetUid} is an employee. Granting 'admin' claims but keeping Firestore users.role as 'employee'.`);
         } else {
-          newFirestoreRole = "standard_admin";
+          newFirestoreRole = "admin";
         }
       } else if (roleToSet === "employee" || roleToSet === "client") {
-        newClaims.admin = false; newClaims.super_admin = false; newClaims.standard_admin = false;
+        newClaims.admin = false; newClaims.super_admin = false;
         newFirestoreRole = roleToSet;
       } else if (roleToSet === "none_admin") {
-        newClaims.admin = false; newClaims.super_admin = false; newClaims.standard_admin = false;
+        newClaims.admin = false; newClaims.super_admin = false;
         newFirestoreRole = currentFirestoreUserRole;
         functions.logger.info(`Removing admin-level claims for ${targetUid}. Firestore users.role ('${newFirestoreRole}') will be preserved if it exists.`);
       }
@@ -861,7 +861,7 @@ exports.addPayrollAdjustment = functions
       amount: amount,
       reason: reason.trim(),
       adminUid: adminUid,
-      timestamp: admin.firestore.Timestamp.now(), // <<<< **** CORRECTED THIS LINE ****
+      timestamp: FieldValue.serverTimestamp(),
     };
 
     try {
@@ -872,8 +872,8 @@ exports.addPayrollAdjustment = functions
           employeeId: employeeId,
           payPeriodId: payPeriodId,
           lastUpdatedByAdmin: adminUid,
-          lastAdjustmentAt: serverTimestamp, // This is fine (uses global FieldValue.serverTimestamp)
-          updatedAt: serverTimestamp, // This is fine (uses global FieldValue.serverTimestamp)
+          lastAdjustmentAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
       );

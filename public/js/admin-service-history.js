@@ -493,58 +493,54 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`DEBUG ASH: Date filters - Start: '${startDateVal || 'None'}', End: '${endDateVal || 'None'}'`);
 
             if (startDateVal && startDateVal.trim() !== '') {
-                const jsStartDate = new Date(startDateVal); 
-                jsStartDate.setUTCHours(0,0,0,0);
+                // Parse date and set to start of day in local timezone
+                const jsStartDate = new Date(startDateVal + 'T00:00:00');
                 baseQuery = baseQuery.where('serviceDate', '>=', firebase.firestore.Timestamp.fromDate(jsStartDate));
-                console.log(`DEBUG ASH: *** APPLIED START DATE FILTER ***: ${jsStartDate.toISOString()}`);
+                console.log(`DEBUG ASH: *** APPLIED START DATE FILTER ***: ${startDateVal} (${jsStartDate.toLocaleDateString()})`);
             }
             if (endDateVal && endDateVal.trim() !== '') {
-                const jsEndDate = new Date(endDateVal);
-                jsEndDate.setUTCHours(23,59,59,999);
+                // Parse date and set to end of day in local timezone
+                const jsEndDate = new Date(endDateVal + 'T23:59:59');
                 baseQuery = baseQuery.where('serviceDate', '<=', firebase.firestore.Timestamp.fromDate(jsEndDate));
-                console.log(`DEBUG ASH: *** APPLIED END DATE FILTER ***: ${jsEndDate.toISOString()}`);
+                console.log(`DEBUG ASH: *** APPLIED END DATE FILTER ***: ${endDateVal} (${jsEndDate.toLocaleDateString()})`);
             }
 
             if (!startDateVal && !endDateVal) {
                 console.log("DEBUG ASH: *** NO DATE FILTERS APPLIED *** - querying ALL service history");
             }
 
-            // SIMPLIFIED APPROACH: For now, just get the records directly without complex pagination
-            // This bypasses the pagination logic that might be causing issues
-            console.log("DEBUG ASH: Using simplified query approach");
+            // PROPER PAGINATION APPROACH: Get all records, then paginate correctly
+            console.log("DEBUG ASH: Using proper pagination approach");
             
-            // Query all records (the issue was with orderBy, not with access)
-            // Limit query size to prevent performance issues while still showing full history
-            const maxRecordsToFetch = Math.min(recordsPerPage * currentPage, 1000); // Cap at 1000 records
-            let query = baseQuery.limit(maxRecordsToFetch);
-            const snapshot = await query.get();
+            // First get count of total records that match the filter
+            const countSnapshot = await baseQuery.get();
+            totalRecords = countSnapshot.size;
+            totalPages = Math.ceil(totalRecords / recordsPerPage);
             
-            console.log(`DEBUG ASH: Simplified query executed, found ${snapshot.size} total records`);
+            console.log(`DEBUG ASH: Found ${totalRecords} total records matching filters`);
+            console.log(`DEBUG ASH: Total pages needed: ${totalPages} (${recordsPerPage} records per page)`);
             
-            // Sort the documents by date (newest first) since we can't rely on Firestore orderBy
-            const sortedDocs = snapshot.docs.sort((a, b) => {
+            // Sort all documents by date (newest first) 
+            const allSortedDocs = countSnapshot.docs.sort((a, b) => {
                 const dateA = a.data().serviceDate ? a.data().serviceDate.toDate() : new Date(0);
                 const dateB = b.data().serviceDate ? b.data().serviceDate.toDate() : new Date(0);
                 return dateB - dateA; // Descending order (newest first)
             });
             
-            console.log(`DEBUG ASH: Sorted ${sortedDocs.length} documents by date`);
-            
             // Calculate which records to show for current page
             const startIndex = (currentPage - 1) * recordsPerPage;
             const endIndex = currentPage * recordsPerPage;
-            const docsToShow = sortedDocs.slice(startIndex, endIndex);
+            const docsToShow = allSortedDocs.slice(startIndex, endIndex);
             
-            console.log(`DEBUG ASH: Showing records ${startIndex + 1}-${Math.min(endIndex, snapshot.size)} of ${snapshot.size}`);
+            console.log(`DEBUG ASH: Showing records ${startIndex + 1}-${Math.min(endIndex, totalRecords)} of ${totalRecords} (Page ${currentPage} of ${totalPages})`);
             
-            // Update pagination info
-            totalRecords = snapshot.size;
-            totalPages = Math.ceil(totalRecords / recordsPerPage);
-            
-            // If we hit the cap, there might be more records
-            if (snapshot.size === maxRecordsToFetch && maxRecordsToFetch === 1000) {
-                console.log("DEBUG ASH: Hit 1000 record limit, there may be more records");
-                totalPages = Math.max(totalPages, 20); // Assume at least 20 pages if we hit limit
+            if (totalRecords > 0) {
+                const dates = allSortedDocs.map(doc => doc.data().serviceDate ? doc.data().serviceDate.toDate() : null).filter(d => d);
+                if (dates.length > 0) {
+                    const earliest = new Date(Math.min(...dates)).toLocaleDateString();
+                    const latest = new Date(Math.max(...dates)).toLocaleDateString();
+                    console.log(`DEBUG ASH: Displayed records date range - Earliest: ${earliest}, Latest: ${latest}`);
+                }
             }
             
             if (serviceHistoryLoadingMsg) serviceHistoryLoadingMsg.style.display = 'none';
@@ -556,8 +552,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             let tableRowsHtml = '';
-            let earliestDate = null;
-            let latestDate = null;
             
             docsToShow.forEach(doc => {
                 const entry = doc.data();
@@ -567,16 +561,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 let serviceDateDisplay = 'N/A';
                 if (entry.serviceDate && entry.serviceDate.toDate) {
                     const dateObj = entry.serviceDate.toDate();
-
-                    // Track date range for debugging
-                    if (!earliestDate || dateObj < earliestDate) earliestDate = dateObj;
-                    if (!latestDate || dateObj > latestDate) latestDate = dateObj;
-
-                    const year = dateObj.getUTCFullYear();
-                    const month = dateObj.getUTCMonth() + 1; // JS months are 0-indexed
-                    const day = dateObj.getUTCDate();
-
-                    serviceDateDisplay = `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
+                    serviceDateDisplay = dateObj.toLocaleDateString('en-US');
                 }
                 let assignedEmployees = 'N/A';
                 if (entry.employeeAssignments && Array.isArray(entry.employeeAssignments) && entry.employeeAssignments.length > 0) {
@@ -621,12 +606,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>`;
             });
             
-            // Log the date range of returned records for debugging
-            if (earliestDate && latestDate) {
-                console.log(`DEBUG ASH: Displayed records date range - Earliest: ${earliestDate.toLocaleDateString()}, Latest: ${latestDate.toLocaleDateString()}`);
-            } else if (docsToShow.length > 0) {
-                console.log("DEBUG ASH: Records found but no valid dates detected");
-            }
+            // Records loaded successfully
             
             if (serviceHistoryTableBody) serviceHistoryTableBody.innerHTML = tableRowsHtml;
             

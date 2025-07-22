@@ -46,13 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const setEmployeePasswordMessageEl = document.getElementById('set-employee-password-message');
     const currentEmployeeNameForRatesSpan = document.getElementById('current-employee-name-for-rates');
     // --- User Role Management (within Edit Employee Section) ---
-    const userRoleManagementSection = document.getElementById('user-role-management-section');
-    const currentEmployeeNameForRoleSpan = document.getElementById('current-employee-name-for-role');
-    const roleMgmtTargetUidInput = document.getElementById('role-mgmt-target-uid');
-    const roleMgmtRoleSelect = document.getElementById('role-mgmt-role-select');
-    const setUserRoleForm = document.getElementById('set-user-role-form'); // Assuming you want to handle form submit
-    // const setUserRoleButton = document.getElementById('set-user-role-button'); // Alternative if not using form submit
-    const setUserRoleMessageEl = document.getElementById('set-user-role-message');
+    // Role management section removed - now handled in main form
 
 
     // --- Employee Rate Management (within Edit Employee Section) ---
@@ -142,16 +136,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
 
                         // Check for admin privileges based on claims OR Firestore role
-                        const isAdminByClaims = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
-                        const isAdminByRole = userData && (userData.role === 'admin' || userData.role === 'super_admin' || userData.role === 'standard_admin');
+                        const isAdminByClaims = claims && (claims.admin === true || claims.super_admin === true);
+                        const isAdminByRole = userData && (userData.role === 'admin' || userData.role === 'super_admin');
 
                         if (isAdminByClaims || isAdminByRole) {
                             console.log("DEBUG AEMP: Admin access confirmed for Employee Management Page.");
                             
-                            // Store claims on currentAdminUser for later use and show role management for all admins
+                            // Store claims on currentAdminUser for later use
                             currentAdminUser.claims = claims;
-                            const roleMgmtSection = document.getElementById('user-role-management-section');
-                            if (roleMgmtSection) roleMgmtSection.style.display = 'block';
+                            
+                            // Role management is now handled in the main form - no separate section needed
                             
                             setupEventListeners();
                             fetchAndDisplayEmployees(); 
@@ -164,14 +158,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     .catch(error => { 
                         console.error("DEBUG AEMP: Error fetching user data from Firestore:", error);
                         // Allow access if claims are sufficient, even if Firestore doc fails, but log error
-                        const isAdminByClaimsOnly = claims && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true);
+                        const isAdminByClaimsOnly = claims && (claims.admin === true || claims.super_admin === true);
                         if(isAdminByClaimsOnly) {
                             console.warn("DEBUG AEMP: Proceeding with admin access based on claims despite Firestore user doc error.");
                             
-                            // Store claims and show role management for all admins
+                            // Store claims on currentAdminUser for later use
                             currentAdminUser.claims = claims;
-                            const roleMgmtSection = document.getElementById('user-role-management-section');
-                            if (roleMgmtSection) roleMgmtSection.style.display = 'block';
+                            
+                            // Role management is now handled in the main form - no separate section needed
                             
                             setupEventListeners();
                             fetchAndDisplayEmployees(); 
@@ -236,75 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showGeneralMessage(addEditEmployeeRateMessage, '', 'info');
             });
         }
-        // --- Event Listener for User Role Management Form ---
-        if (setUserRoleForm) {
-            setUserRoleForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                if (!currentAdminUser) {
-                    showGeneralMessage(setUserRoleMessageEl, 'Admin session error. Please re-login.', 'error');
-                    return;
-                }
-                if (!currentAdminUser.claims || currentAdminUser.claims.super_admin !== true) {
-    showGeneralMessage(setUserRoleMessageEl, 'Action not allowed. You are not a super admin.', 'error');
-    return;
-}
-console.log("AEMP DEBUG: Current Firebase Auth User before calling setAdminRole:", firebase.auth().currentUser);
-if (firebase.auth().currentUser) {
-    const idTokenResult = await firebase.auth().currentUser.getIdTokenResult(true); // Force refresh
-    console.log("AEMP DEBUG: Current User Claims before call:", idTokenResult.claims);
-}
-
-                const targetUid = roleMgmtTargetUidInput.value;
-                const roleToSet = roleMgmtRoleSelect.value;
-
-                if (!targetUid || targetUid === 'N/A - Login account not found') {
-                    showGeneralMessage(setUserRoleMessageEl, 'Target user UID not available.', 'error');
-                    return;
-                }
-                if (!roleToSet) {
-                    showGeneralMessage(setUserRoleMessageEl, 'Please select a role.', 'error');
-                    return;
-                }
-
-                // Optional: Add a confirmation dialog
-                if (!confirm(`Are you sure you want to set the role for user UID ${targetUid} to "${roleMgmtRoleSelect.options[roleMgmtRoleSelect.selectedIndex].text}"?`)) {
-                    return;
-                }
-
-                showGeneralMessage(setUserRoleMessageEl, 'Updating user role...', 'info');
-                setFormDisabledState(setUserRoleForm, true);
-
-                try {
-                    const setAdminRoleFunction = functions.httpsCallable('setAdminRole');
-                    // Pass data in the {data: payload} structure if your CF expects it that way
-                    // Based on our CF definition, it does.
-                    const result = await setAdminRoleFunction({ data: { targetUid: targetUid, roleToSet: roleToSet } });
-
-                    if (result.data.success) {
-                        showGeneralMessage(setUserRoleMessageEl, result.data.message || 'User role updated successfully!', 'success');
-                        // Optionally, re-fetch and display the new current role in the UI immediately
-                        // For example, if you have a display element for current role text:
-                        // document.getElementById('actualCurrentRoleText').textContent = roleToSet;
-                        // Or re-run the part of handleEditEmployeeClick that fetches the role
-                        if (editEmployeeAuthUidInput.value === targetUid) { // If still editing the same user
-                            try {
-                                const userRoleDoc = await db.collection('users').doc(targetUid).get();
-                                if (userRoleDoc.exists) {
-                                    roleMgmtRoleSelect.value = userRoleDoc.data().role || 'employee';
-                                }
-                            } catch (e) { console.warn("Could not refresh role display after update", e); }
-                        }
-                    } else {
-                        throw new Error(result.data.message || result.data.error || 'Failed to update role via Cloud Function.');
-                    }
-                } catch (error) {
-                    console.error("AEMP: Error calling setAdminRole Cloud Function:", error);
-                    showGeneralMessage(setUserRoleMessageEl, `Error: ${error.message || 'An unexpected error occurred.'}`, 'error');
-                } finally {
-                    setFormDisabledState(setUserRoleForm, false);
-                }
-            });
-        }
+        // Role management form removed - now handled in main employee form
 
         // Delegated listener for employee card actions
         if (employeeCardsContainer) {
@@ -543,10 +469,7 @@ async function handleEditEmployeeClick(employeeId) {
     if (employeeRatesTableBody) employeeRatesTableBody.innerHTML = ''; 
     if (noEmployeeRatesMessage) noEmployeeRatesMessage.style.display = 'none';
 
-    if (currentEmployeeNameForRoleSpan) currentEmployeeNameForRoleSpan.textContent = 'this User';
-    if (roleMgmtTargetUidInput) roleMgmtTargetUidInput.value = '';
-    if (roleMgmtRoleSelect) roleMgmtRoleSelect.value = 'employee'; 
-    showGeneralMessage(setUserRoleMessageEl, '', 'info'); 
+                // Role management elements removed - now handled in main form 
 
     currentEditingEmployeeId = employeeId; 
     // This log was already in your "original" and is good:
@@ -561,7 +484,6 @@ async function handleEditEmployeeClick(employeeId) {
             currentEditingEmployeeName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
             
             if(currentEmployeeNameForRatesSpan) currentEmployeeNameForRatesSpan.textContent = escapeHtml(currentEditingEmployeeName);
-            if (currentEmployeeNameForRoleSpan) currentEmployeeNameForRoleSpan.textContent = escapeHtml(currentEditingEmployeeName);
 
             if (editEmployeeUidInput) editEmployeeUidInput.value = employeeId; 
             document.getElementById('edit-employee-first-name').value = emp.firstName || '';
@@ -573,6 +495,11 @@ async function handleEditEmployeeClick(employeeId) {
             document.getElementById('edit-employee-system-id').value = employeeId; 
             document.getElementById('edit-employee-status').value = typeof emp.status === 'boolean' ? emp.status.toString() : 'true';
 
+            // Show/hide role field based on current user's permissions
+            // Remove all code that references 'edit-employee-role', roleField, or role management in the edit employee form.
+            // This includes population, event listeners, and comments about role management being handled in the main form.
+            // No code should reference or attempt to set/get the role field in the edit employee form.
+            
             const usersQuery = db.collection('users').where('profileId', '==', employeeId).limit(1);
             const userSnapshot = await usersQuery.get();
             let authUid = null; 
@@ -583,6 +510,11 @@ async function handleEditEmployeeClick(employeeId) {
                 if (editEmployeeAuthUidInput) editEmployeeAuthUidInput.value = authUid; 
                 console.log(`AEMP DEBUG: editEmployeeAuthUidInput.value SET TO: '${editEmployeeAuthUidInput.value}'`);
                 
+                // Populate role field if user has permission to see it
+                // Remove all code that references 'edit-employee-role', roleField, or role management in the edit employee form.
+                // This includes population, event listeners, and comments about role management being handled in the main form.
+                // No code should reference or attempt to set/get the role field in the edit employee form.
+                
                 // --- START NEW DETAILED LOGS for element checks ---
                 console.log("AEMP DEBUG: Checking setEmployeeNewPasswordBtn:", setEmployeeNewPasswordBtn);
                 if (setEmployeeNewPasswordBtn) {
@@ -592,60 +524,10 @@ async function handleEditEmployeeClick(employeeId) {
                     console.error("AEMP ERROR: setEmployeeNewPasswordBtn element is null!");
                 }
 
-                console.log("AEMP DEBUG: Checking roleMgmtTargetUidInput:", roleMgmtTargetUidInput);
-                if (roleMgmtTargetUidInput) {
-                    roleMgmtTargetUidInput.value = authUid;
-                    console.log(`AEMP DEBUG: roleMgmtTargetUidInput.value set to: ${authUid}`);
-                } else {
-                    console.error("AEMP ERROR: roleMgmtTargetUidInput element is null!");
-                }
+                // Role management elements removed - now handled in main form
                 // --- END NEW DETAILED LOGS for element checks ---
                 
-                // This log was already in your "original" (or similar to what I suggested) and is good:
-                console.log("AEMP DEBUG: Checking conditions for role fetching. userRoleManagementSection:", userRoleManagementSection, "style.display:", userRoleManagementSection ? userRoleManagementSection.style.display : "N/A", "authUid:", authUid);
-                if (userRoleManagementSection && userRoleManagementSection.style.display === 'block' && authUid) {
-                    try {
-                        // These logs were already in your "original" (or similar to what I suggested) and are good:
-                        console.log(`AEMP DEBUG: Fetching role for Auth UID: ${authUid}`);
-                        const userRoleDoc = await db.collection('users').doc(authUid).get();
-                        console.log(`AEMP DEBUG: userRoleDoc for ${authUid} exists: ${userRoleDoc.exists}`);
-
-                        if (userRoleDoc.exists) {
-                            const userRoleData = userRoleDoc.data();
-                            console.log(`AEMP DEBUG: User role data for ${authUid}:`, userRoleData); // Good existing log
-                            const currentRole = userRoleData.role || 'employee'; 
-                            if (roleMgmtRoleSelect) {
-                                const optionExists = Array.from(roleMgmtRoleSelect.options).some(opt => opt.value === currentRole);
-                                if (optionExists) {
-                                    roleMgmtRoleSelect.value = currentRole;
-                                } else {
-                                    roleMgmtRoleSelect.value = 'employee'; 
-                                    console.warn(`AEMP WARN: Role "${currentRole}" from DB (users/${authUid}) not found in role select dropdown. Defaulting to 'employee'.`);
-                                }
-                            }
-                            const currentRoleDisplayEl = document.getElementById('currentEmployeeRoleDisplay');
-                            if(currentRoleDisplayEl) currentRoleDisplayEl.textContent = escapeHtml(currentRole);
-                        } else {
-                            // Good existing logs here
-                            console.warn(`AEMP WARN: User document users/${authUid} not found when fetching role.`);
-                            if (roleMgmtRoleSelect) roleMgmtRoleSelect.value = 'employee';
-                            const currentRoleDisplayEl = document.getElementById('currentEmployeeRoleDisplay');
-                            if(currentRoleDisplayEl) currentRoleDisplayEl.textContent = 'employee (User record not found)';
-                            // The second console.warn about "User document not found... when trying to set role dropdown" is redundant if the one above fires.
-                        }
-                    } catch (roleError) {
-                        console.error(`AEMP CATCH ERROR: Error fetching user role for UID ${authUid}:`, roleError); // Changed from "AEMP:" to "AEMP CATCH ERROR:"
-                        if (roleMgmtRoleSelect) roleMgmtRoleSelect.value = 'employee'; 
-                        const currentRoleDisplayEl = document.getElementById('currentEmployeeRoleDisplay');
-                        if(currentRoleDisplayEl) currentRoleDisplayEl.textContent = 'Error fetching role';
-                    }
-                } else if (roleMgmtRoleSelect) {
-                    // Good existing log here
-                    console.log("AEMP DEBUG: Role management section not visible or authUid missing for role fetch path."); // Changed from "role fetch." to "role fetch path." for clarity
-                    roleMgmtRoleSelect.value = 'employee';
-                    const currentRoleDisplayEl = document.getElementById('currentEmployeeRoleDisplay');
-                    if(currentRoleDisplayEl) currentRoleDisplayEl.textContent = 'employee';
-                }
+                // Role management is now handled in the main form - no separate section needed
             } else { 
                 // This block for "No Auth UID found" from your original looks good, including its logs.
                 console.warn(`AEMP WARN: No Auth UID found in 'users' for employeeProfileId: ${employeeId}. Password/Role management will be disabled.`);
@@ -654,8 +536,7 @@ async function handleEditEmployeeClick(employeeId) {
                 if (setEmployeeNewPasswordBtn) setEmployeeNewPasswordBtn.disabled = true;
                 showGeneralMessage(editEmployeeMessageEl, 'Warning: Login account (Auth UID) not found for this employee profile. Password or role cannot be managed.', 'error');
                 
-                if (roleMgmtTargetUidInput) roleMgmtTargetUidInput.value = 'N/A - Login account not found';
-                if (roleMgmtRoleSelect) roleMgmtRoleSelect.value = 'employee'; 
+                // Role management elements removed - now handled in main form 
                 const currentRoleDisplayEl = document.getElementById('currentEmployeeRoleDisplay');
                 if(currentRoleDisplayEl) currentRoleDisplayEl.textContent = 'employee (No Auth account)';
             }
@@ -738,8 +619,10 @@ async function handleEditEmployeeSubmit(event) {
                         'Authorization': `Bearer ${await auth.currentUser.getIdToken()}`
                     },
                     body: JSON.stringify({
-                        targetUid: authUid,
-                        role: roleEl.value
+                        data: {
+                            targetUid: authUid,
+                            roleToSet: roleEl.value
+                        }
                     })
                 });
                 

@@ -101,6 +101,59 @@
          .nav-item:not(.active):hover {
              @apply bg-secondary;
          }
+         
+         /* Mobile-friendly sidebar styles */
+         .sidebar {
+             transition: transform 0.3s ease;
+         }
+         
+         /* Mobile overlay */
+         .sidebar-overlay {
+             position: fixed;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             background-color: rgba(0, 0, 0, 0.5);
+             z-index: 40;
+             display: none;
+         }
+         
+         /* Mobile responsive */
+         @media (max-width: 768px) {
+             .sidebar {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 height: 100vh;
+                 transform: translateX(-100%);
+                 z-index: 50;
+             }
+             
+             .sidebar-open {
+                 transform: translateX(0);
+             }
+             
+             .main-content {
+                 margin-left: 0 !important;
+                 width: 100%;
+             }
+             
+             .sidebar-overlay.active {
+                 display: block;
+             }
+             
+             .mobile-menu-button {
+                 display: block;
+             }
+         }
+         
+         /* Desktop */
+         @media (min-width: 769px) {
+             .mobile-menu-button {
+                 display: none;
+             }
+         }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50 font-sans">
@@ -114,9 +167,17 @@
 
     <!-- Main Employee Dashboard -->
     <div id="employee-dashboard-content" class="min-h-screen bg-background" style="display: none;">
+        <!-- Mobile overlay -->
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+        
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-button" class="mobile-menu-button fixed top-4 right-4 z-60 p-4 bg-white rounded-lg shadow-lg border border-border md:hidden">
+            <i data-lucide="menu" class="h-7 w-7"></i>
+        </button>
+        
         <div class="flex">
             <!-- Sidebar -->
-            <div class="w-64 bg-white shadow-lg border-r border-border">
+            <div id="sidebar" class="sidebar w-64 bg-white shadow-lg border-r border-border">
                 <div class="p-6">
                     <h1 class="text-xl font-bold text-foreground">Employee Portal</h1>
                     <p class="text-sm text-muted-foreground" id="employee-name-sidebar">Loading...</p>
@@ -164,10 +225,10 @@
             </div>
 
             <!-- Main Content -->
-            <div class="flex-1 p-8">
+            <div class="main-content flex-1 p-8 md:ml-0">
                 <!-- Dashboard View -->
                 <div id="view-dashboard" class="view-section">
-                    <div class="mb-6">
+                    <div class="mb-6 mt-4 md:mt-0">
                         <h1 id="welcome-message" class="text-3xl font-bold text-foreground">Welcome, Employee!</h1>
                         <p class="text-muted-foreground">Cleveland Clean Solutions Employee Portal</p>
                     </div>
@@ -353,7 +414,7 @@
                                     <input type="file" id="gallery-input" accept="image/*" multiple class="hidden">
                                 </div>
                                 
-                                <div id="selected-files-display" class="p-3 bg-gray-50 rounded-md text-sm text-muted-foreground italic hidden">
+                                <div id="selected-files-display" class="p-3 bg-gray-50 rounded-md text-sm text-muted-foreground italic">
                                     No files selected
                                 </div>
                                 
@@ -363,9 +424,10 @@
                                             class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"></textarea>
                                 </div>
                                 
-                                <button id="upload-button" class="btn-primary w-full">
-                                    <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
-                                    Upload Selected Photos
+                                <!-- Prominent Upload Button -->
+                                <button id="upload-button" class="w-full py-3 mt-2 rounded-lg font-bold text-white text-lg shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400" style="background: linear-gradient(90deg, #38bdf8 0%, #22d3ee 100%);">
+                                    <i data-lucide="upload" class="h-5 w-5 mr-2 inline-block align-middle"></i>
+                                    Submit Selected Photos
                                 </button>
                                 
                                 <div id="upload-progress" class="h-2 bg-gray-200 rounded-full hidden">
@@ -461,22 +523,14 @@
                         <div class="card-header">
                             <h2 class="card-title flex items-center gap-2">
                                 <i data-lucide="dollar-sign" class="h-5 w-5"></i>
-                                Recent Payroll
+                                Payroll Information
                             </h2>
                         </div>
                         <div class="card-content">
-                            <div id="payroll-loading-message" class="flex items-center justify-center py-8">
-                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
-                                <span class="text-muted-foreground">Loading payroll records...</span>
-                            </div>
-                            
-                            <div id="payroll-cards-container" class="space-y-3 hidden">
-                                <!-- Payroll cards will be loaded here -->
-                            </div>
-                            
-                            <div id="no-payroll-message" class="text-center py-8 hidden">
-                                <i data-lucide="receipt" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
-                                <p class="text-muted-foreground">No payroll records found.</p>
+                            <div class="text-center py-12">
+                                <i data-lucide="clock" class="h-16 w-16 text-muted-foreground mx-auto mb-4"></i>
+                                <h3 class="text-xl font-semibold text-foreground mb-2">Coming Soon</h3>
+                                <p class="text-muted-foreground">Payroll features are currently under development. Check back soon for access to your payroll information.</p>
                             </div>
                         </div>
                     </div>

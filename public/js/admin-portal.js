@@ -256,8 +256,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusMessage = `${payrollSnapshot.size} pending records • Last updated: ${new Date().toLocaleTimeString()}`;
                 
             } catch (payrollError) {
-                console.warn('Payroll collection access limited, using estimation:', payrollError);
+                // Silent handling - this is expected for users without payroll access
                 statusMessage = `Estimated: ${completedJobs} jobs completed • Limited access mode`;
+                pendingCount = 0;
+                processedCount = 0;
             }
 
             // Update the display
@@ -489,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const serviceTime = formatServiceDisplayTime(service.serviceDate);
                 // CHANGED: Use button for modal trigger
                 li.innerHTML = `
-                    <strong>${escapeHtml(service.clientName || 'N/A Client')}</strong> - ${escapeHtml(service.locationName || 'N/A Location')}
+                    <strong>${escapeHtml(service.locationName || 'N/A Location')}</strong>
                     <br>Time: ${escapeHtml(serviceTime)} 
                     ${service.serviceType ? `<br>Type: ${escapeHtml(service.serviceType)}` : ''}
                     <br><button type="button" class="details-link modal-trigger-button" data-service-id="${doc.id}" title="View full details">Details</button>
@@ -672,19 +674,55 @@ document.addEventListener('DOMContentLoaded', function() {
         if(quickAddServiceForm) setFormDisabled(quickAddServiceForm, true);
         showFormMessage(qasMessageEl, "Scheduling new service...", "info");
 
-        const clientId = qasClientSelect.value;
-        const locationId = qasLocationSelect.value;
+        const serviceMode = document.querySelector('input[name="qas-service-mode"]:checked').value;
         const serviceDateStr = document.getElementById('qas-service-date').value;
         const serviceTimeStr = document.getElementById('qas-service-time').value; 
-        const serviceTypeNotes = document.getElementById('qas-service-type').value.trim();
+        let serviceTypeNotes = document.getElementById('qas-service-type').value.trim();
 
-        const clientName = qasClientSelect.options[qasClientSelect.selectedIndex]?.dataset.clientName || "Unknown Client";
-        const locationName = qasLocationSelect.options[qasLocationSelect.selectedIndex]?.dataset.locationName || "Unknown Location";
+        let clientId, locationId, clientName, locationName, customPrice = null;
 
-        if (!clientId || !locationId || !serviceDateStr) {
-            showFormMessage(qasMessageEl, "Client, Location, and Service Date are required.", "error");
-            if(quickAddServiceForm) setFormDisabled(quickAddServiceForm, false);
-            return;
+        if (serviceMode === 'regular') {
+            // Regular service using existing client/location
+            clientId = qasClientSelect.value;
+            locationId = qasLocationSelect.value;
+            clientName = qasClientSelect.options[qasClientSelect.selectedIndex]?.dataset.clientName || "Unknown Client";
+            locationName = qasLocationSelect.options[qasLocationSelect.selectedIndex]?.dataset.locationName || "Unknown Location";
+
+            if (!clientId || !locationId || !serviceDateStr) {
+                showFormMessage(qasMessageEl, "Client, Location, and Service Date are required.", "error");
+                if(quickAddServiceForm) setFormDisabled(quickAddServiceForm, false);
+                return;
+            }
+        } else {
+            // Custom service with manual input
+            clientName = document.getElementById('qas-custom-client').value.trim();
+            locationName = document.getElementById('qas-custom-location').value.trim();
+            const customContact = document.getElementById('qas-custom-contact').value.trim();
+            const customPriceValue = document.getElementById('qas-custom-price').value;
+
+            if (!clientName || !locationName || !serviceDateStr) {
+                showFormMessage(qasMessageEl, "Client Name, Location, and Service Date are required for custom jobs.", "error");
+                if(quickAddServiceForm) setFormDisabled(quickAddServiceForm, false);
+                return;
+            }
+
+            // Use special IDs for custom jobs
+            clientId = `CUSTOM-${Date.now()}`;
+            locationId = `CUSTOM-LOC-${Date.now()}`;
+            
+            if (customPriceValue && !isNaN(parseFloat(customPriceValue))) {
+                customPrice = parseFloat(customPriceValue);
+            }
+
+            // Add contact info to notes if provided
+            if (customContact) {
+                const contactNote = `Contact: ${customContact}`;
+                if (serviceTypeNotes) {
+                    serviceTypeNotes += ` | ${contactNote}`;
+                } else {
+                    serviceTypeNotes = contactNote;
+                }
+            }
         }
 
         let serviceDateTimestamp;
@@ -722,12 +760,14 @@ document.addEventListener('DOMContentLoaded', function() {
             locationId: locationId,
             locationName: locationName,
             serviceDate: serviceDateTimestamp,
-            serviceType: serviceTypeNotes || "Scheduled Service", 
+            serviceType: serviceTypeNotes || (serviceMode === 'custom' ? "Custom Service" : "Scheduled Service"), 
             serviceNotes: null, 
             adminNotes: null,
             employeeAssignments: [], 
             status: "Scheduled",
             payrollProcessed: false,
+            isCustomJob: serviceMode === 'custom',
+            customPrice: customPrice,
             createdAt: serverTimestampFunction(),
             updatedAt: serverTimestampFunction(),
         };
@@ -736,6 +776,12 @@ document.addEventListener('DOMContentLoaded', function() {
             await db.collection('serviceHistory').add(newServiceRecord);
             showFormMessage(qasMessageEl, "New service scheduled successfully!", "success");
             if(quickAddServiceForm) quickAddServiceForm.reset();
+            
+            // Reset service mode to regular
+            document.getElementById('qas-regular-service').checked = true;
+            document.getElementById('qas-regular-fields').classList.remove('hidden');
+            document.getElementById('qas-custom-fields').classList.add('hidden');
+            
             if(qasLocationSelect) {
                  qasLocationSelect.innerHTML = '<option value="">Select Client First</option>';
                  qasLocationSelect.disabled = true;
@@ -1245,6 +1291,30 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                             if (quickAddServiceForm) { /* ... no change ... */
                                 quickAddServiceForm.addEventListener('submit', handleQuickAddServiceSubmit);
+                                
+                                // Service mode toggle listeners
+                                const regularServiceRadio = document.getElementById('qas-regular-service');
+                                const customServiceRadio = document.getElementById('qas-custom-service');
+                                const regularFields = document.getElementById('qas-regular-fields');
+                                const customFields = document.getElementById('qas-custom-fields');
+                                
+                                if (regularServiceRadio) {
+                                    regularServiceRadio.addEventListener('change', () => {
+                                        if (regularServiceRadio.checked) {
+                                            regularFields.classList.remove('hidden');
+                                            customFields.classList.add('hidden');
+                                        }
+                                    });
+                                }
+                                
+                                if (customServiceRadio) {
+                                    customServiceRadio.addEventListener('change', () => {
+                                        if (customServiceRadio.checked) {
+                                            customFields.classList.remove('hidden');
+                                            regularFields.classList.add('hidden');
+                                        }
+                                    });
+                                }
                             }
                             
                             setupPasswordRevealListeners();    
@@ -1289,6 +1359,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                             // --- END NEW MODAL EVENT LISTENERS ---
 
+                            // Add event listeners for new interactive features
+                            attachInteractiveFeatureListeners();
+
                             window.adminPortalModalListenersAttached = true; 
                             console.log("DEBUG: Modal and other listeners attached for admin.html.");
                         }    
@@ -1307,3 +1380,433 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log("DEBUG: Initial script setup finished for admin.html.");
 });
+
+// =================
+// INTERACTIVE FEATURES
+// =================
+
+// Show jobs by status in modal
+function showJobsByStatus(status) {
+    const modal = document.getElementById('job-management-modal');
+    const title = document.getElementById('job-modal-title');
+    const content = document.getElementById('job-modal-content');
+    
+    if (!modal || !title || !content) return;
+    
+    title.textContent = `Manage ${status} Jobs`;
+    content.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading ${status.toLowerCase()} jobs...</p>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+    
+    loadJobsByStatus(status, content);
+}
+
+// Load and display jobs by status
+async function loadJobsByStatus(status, container) {
+    try {
+        if (!db) {
+            throw new Error("Database not ready");
+        }
+        
+        let query = db.collection('serviceHistory');
+        
+        // Adjust query based on status
+        if (status === 'In Progress') {
+            query = query.where('status', 'in', ['In Progress', 'Scheduled'])
+                         .where('serviceDate', '<=', firebase.firestore.Timestamp.now());
+        } else {
+            query = query.where('status', '==', status);
+        }
+        
+        const snapshot = await query.orderBy('serviceDate', 'desc').limit(50).get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-8">No ${status.toLowerCase()} jobs found.</p>`;
+            return;
+        }
+        
+        let html = '<div class="space-y-4">';
+        
+        snapshot.forEach(doc => {
+            const job = doc.data();
+            const serviceDate = job.serviceDate ? job.serviceDate.toDate().toLocaleDateString() : 'Date N/A';
+            const serviceTime = job.serviceDate ? job.serviceDate.toDate().toLocaleTimeString() : 'Time N/A';
+            
+            html += `
+                <div class="border rounded-lg p-4 bg-gray-50">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h4 class="font-medium">${escapeHtml(job.clientName || 'Unknown Client')}</h4>
+                            <p class="text-sm text-gray-600">${escapeHtml(job.locationName || 'Unknown Location')}</p>
+                            <p class="text-sm text-gray-500">${serviceDate} at ${serviceTime}</p>
+                            ${job.adminNotes ? `<p class="text-sm text-blue-600 mt-1">Notes: ${escapeHtml(job.adminNotes)}</p>` : ''}
+                        </div>
+                        <div class="flex flex-col space-y-2 ml-4">
+                            <select onchange="updateJobStatus('${doc.id}', this.value)" class="text-xs p-1 border rounded">
+                                <option value="Scheduled" ${job.status === 'Scheduled' ? 'selected' : ''}>Scheduled</option>
+                                <option value="In Progress" ${job.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                <option value="Complete" ${job.status === 'Complete' ? 'selected' : ''}>Complete</option>
+                            </select>
+                            <button onclick="approveJobPhotos('${doc.id}')" class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
+                                Approve Photos
+                            </button>
+                            <button onclick="editJobNotes('${doc.id}')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                Edit Notes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading jobs by status:', error);
+        container.innerHTML = `<p class="text-center text-red-500 py-8">Error loading jobs: ${error.message}</p>`;
+    }
+}
+
+// Update job status
+async function updateJobStatus(jobId, newStatus) {
+    try {
+        if (!db) {
+            throw new Error("Database not ready");
+        }
+        
+        await db.collection('serviceHistory').doc(jobId).update({
+            status: newStatus,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        console.log(`Job ${jobId} status updated to ${newStatus}`);
+        
+        // Refresh dashboard counts
+        if (typeof loadDashboardStats === 'function') {
+            loadDashboardStats();
+        }
+        
+        // Show success message
+        showNotification(`Job status updated to ${newStatus}`, 'success');
+        
+    } catch (error) {
+        console.error('Error updating job status:', error);
+        showNotification(`Failed to update job status: ${error.message}`, 'error');
+    }
+}
+
+// Approve job photos
+async function approveJobPhotos(jobId) {
+    try {
+        if (!db) {
+            throw new Error("Database not ready");
+        }
+        
+        // Get job details to find location
+        const jobDoc = await db.collection('serviceHistory').doc(jobId).get();
+        if (!jobDoc.exists) {
+            throw new Error("Job not found");
+        }
+        
+        const job = jobDoc.data();
+        const serviceDate = job.serviceDate ? job.serviceDate.toDate() : new Date();
+        
+        // Find photos for this location around the service date
+        const startDate = new Date(serviceDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(serviceDate);
+        endDate.setHours(23, 59, 59, 999);
+        
+        const photosSnapshot = await db.collection('servicePhotos')
+            .where('locationId', '==', job.locationId)
+            .where('uploadedAt', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+            .where('uploadedAt', '<=', firebase.firestore.Timestamp.fromDate(endDate))
+            .get();
+        
+        const batch = db.batch();
+        let photoCount = 0;
+        
+        photosSnapshot.forEach(photoDoc => {
+            batch.update(photoDoc.ref, {
+                isClientVisible: true,
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                approvedBy: firebase.auth().currentUser.uid
+            });
+            photoCount++;
+        });
+        
+        if (photoCount > 0) {
+            await batch.commit();
+            showNotification(`${photoCount} photos approved for client viewing`, 'success');
+        } else {
+            showNotification('No photos found for this job date', 'info');
+        }
+        
+    } catch (error) {
+        console.error('Error approving photos:', error);
+        showNotification(`Failed to approve photos: ${error.message}`, 'error');
+    }
+}
+
+// Edit job notes
+function editJobNotes(jobId) {
+    const notes = prompt('Enter admin notes for this job:');
+    if (notes !== null) {
+        updateJobNotes(jobId, notes);
+    }
+}
+
+// Update job notes
+async function updateJobNotes(jobId, notes) {
+    try {
+        if (!db) {
+            throw new Error("Database not ready");
+        }
+        
+        await db.collection('serviceHistory').doc(jobId).update({
+            adminNotes: notes,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showNotification('Job notes updated successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error updating job notes:', error);
+        showNotification(`Failed to update notes: ${error.message}`, 'error');
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Create a simple notification system
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-md ${
+        type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+        type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+        'bg-blue-100 text-blue-800 border border-blue-200'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span>${escapeHtml(message)}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-lg font-bold">&times;</button>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Service Agreement Management
+function openServiceAgreementModal(clientId = '') {
+    const modal = document.getElementById('service-agreement-modal');
+    const clientSelect = document.getElementById('agreement-client-select');
+    
+    if (!modal || !clientSelect) return;
+    
+    // Populate client dropdown
+    populateAgreementClientDropdown();
+    
+    if (clientId) {
+        clientSelect.value = clientId;
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+// Populate client dropdown for agreements
+async function populateAgreementClientDropdown() {
+    const select = document.getElementById('agreement-client-select');
+    if (!select || !db) return;
+    
+    try {
+        const snapshot = await db.collection('clientMasterList')
+            .where('status', '==', true)
+            .orderBy('companyName', 'asc')
+            .get();
+        
+        let html = '<option value="">Select Client</option>';
+        snapshot.forEach(doc => {
+            const client = doc.data();
+            html += `<option value="${doc.id}">${escapeHtml(client.companyName)}</option>`;
+        });
+        
+        select.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading clients for agreement:', error);
+        select.innerHTML = '<option value="">Error loading clients</option>';
+    }
+}
+
+// Attach event listeners for interactive features
+function attachInteractiveFeatureListeners() {
+    // Job management modal close buttons
+    const closeJobModal = document.getElementById('close-job-modal');
+    const jobModal = document.getElementById('job-management-modal');
+    
+    if (closeJobModal && jobModal) {
+        closeJobModal.addEventListener('click', () => {
+            jobModal.classList.add('hidden');
+        });
+        
+        jobModal.addEventListener('click', (e) => {
+            if (e.target === jobModal) {
+                jobModal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Service agreement modal close buttons
+    const closeAgreementModal = document.getElementById('close-agreement-modal');
+    const agreementModal = document.getElementById('service-agreement-modal');
+    const cancelAgreement = document.getElementById('cancel-agreement');
+    
+    if (closeAgreementModal && agreementModal) {
+        closeAgreementModal.addEventListener('click', () => {
+            agreementModal.classList.add('hidden');
+        });
+        
+        agreementModal.addEventListener('click', (e) => {
+            if (e.target === agreementModal) {
+                agreementModal.classList.add('hidden');
+            }
+        });
+    }
+    
+    if (cancelAgreement && agreementModal) {
+        cancelAgreement.addEventListener('click', () => {
+            agreementModal.classList.add('hidden');
+        });
+    }
+    
+    // Service agreement form submission
+    const agreementForm = document.getElementById('service-agreement-form');
+    if (agreementForm) {
+        agreementForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const clientId = document.getElementById('agreement-client-select').value;
+            const frequency = document.getElementById('agreement-frequency').value;
+            const instructions = document.getElementById('agreement-instructions').value;
+            
+            const includedServices = [];
+            document.querySelectorAll('#included-services-checkboxes input:checked').forEach(cb => {
+                includedServices.push(cb.value);
+            });
+            
+            if (!clientId) {
+                showNotification('Please select a client', 'error');
+                return;
+            }
+            
+            try {
+                await db.collection('serviceAgreements').add({
+                    clientId: clientId,
+                    frequency: frequency,
+                    includedServices: includedServices,
+                    specialInstructions: instructions,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isActive: true
+                });
+                
+                showNotification('Service agreement saved successfully', 'success');
+                agreementModal.classList.add('hidden');
+                agreementForm.reset();
+                
+            } catch (error) {
+                console.error('Error saving service agreement:', error);
+                showNotification(`Failed to save agreement: ${error.message}`, 'error');
+            }
+        });
+    }
+    
+    // Refresh awaiting review button
+    const refreshAwaitingReview = document.getElementById('refresh-awaiting-review');
+    if (refreshAwaitingReview) {
+        refreshAwaitingReview.addEventListener('click', () => {
+            if (typeof fetchAndDisplayAwaitingReview === 'function') {
+                fetchAndDisplayAwaitingReview();
+            }
+        });
+    }
+}
+
+// Check and update in-progress jobs based on time and employee clock-ins
+async function updateInProgressJobs() {
+    try {
+        if (!db) return;
+        
+        const now = new Date();
+        const nowTimestamp = firebase.firestore.Timestamp.fromDate(now);
+        
+        // Find scheduled jobs that should be in progress based on time
+        const scheduledJobsSnapshot = await db.collection('serviceHistory')
+            .where('status', '==', 'Scheduled')
+            .where('serviceDate', '<=', nowTimestamp)
+            .get();
+        
+        const batch = db.batch();
+        let updatedCount = 0;
+        
+        for (const doc of scheduledJobsSnapshot.docs) {
+            const job = doc.data();
+            const serviceDate = job.serviceDate.toDate();
+            
+            // Check if current time is within service window (assuming 4-hour window)
+            const serviceEndTime = new Date(serviceDate.getTime() + (4 * 60 * 60 * 1000));
+            
+            if (now >= serviceDate && now <= serviceEndTime) {
+                // Check if any employee is clocked in at this location
+                const timeTrackingSnapshot = await db.collection('employeeTimeTracking')
+                    .where('locationId', '==', job.locationId)
+                    .where('status', '==', 'Clocked In')
+                    .where('clockInTime', '>=', firebase.firestore.Timestamp.fromDate(new Date(serviceDate.getTime() - (60 * 60 * 1000)))) // 1 hour before
+                    .get();
+                
+                if (!timeTrackingSnapshot.empty || now >= serviceDate) {
+                    batch.update(doc.ref, {
+                        status: 'In Progress',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    updatedCount++;
+                }
+            }
+        }
+        
+        if (updatedCount > 0) {
+            await batch.commit();
+            console.log(`Updated ${updatedCount} jobs to "In Progress" status`);
+            
+            // Refresh dashboard if function exists
+            if (typeof loadDashboardStats === 'function') {
+                loadDashboardStats();
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error updating in-progress jobs:', error);
+    }
+}
+
+// Run in-progress check every 5 minutes
+setInterval(updateInProgressJobs, 5 * 60 * 1000);
+
+// Make functions globally available
+window.showJobsByStatus = showJobsByStatus;
+window.updateJobStatus = updateJobStatus;
+window.approveJobPhotos = approveJobPhotos;
+window.editJobNotes = editJobNotes;
+window.openServiceAgreementModal = openServiceAgreementModal;

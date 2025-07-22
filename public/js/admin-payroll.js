@@ -120,24 +120,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     const status = payrollData.status || 'Unknown'; 
                     const isPaid = status === 'Paid';
                     
+                    const payPeriodDisplay = endDateStr !== 'N/A' ? `${startDateStr} - ${endDateStr}` : startDateStr;
+                    
                     payrollHtml += `
                         <tr class="payroll-summary-row" data-payroll-id="${payrollId}">
-                            <td>${escapeHtml(startDateStr)}</td>
-                            <td>${escapeHtml(endDateStr)}</td>
-                            <td>${escapeHtml(employeeName)}</td>
-                            <td>$${escapeHtml(totalEarnings)}</td>
-                            <td><span style="font-weight: bold; color: ${isPaid ? 'green' : 'orange'};">${escapeHtml(status)}</span></td>
-                            <td>
-                                ${!isPaid ? `<button class="action-button mark-payroll-paid-button" data-payroll-id="${payrollId}">Mark as Paid</button>` : '<span>-</span>'}
-                            </td>
-                            <td>
-                                <button class="action-button view-payroll-details-button" data-payroll-id="${payrollId}">View Details</button>
+                            <td class="p-4">${escapeHtml(payPeriodDisplay)}</td>
+                            <td class="p-4">${escapeHtml(employeeName)}</td>
+                            <td class="p-4">$${escapeHtml(totalEarnings)}</td>
+                            <td class="p-4"><span style="font-weight: bold; color: ${isPaid ? 'green' : 'orange'};">${escapeHtml(status)}</span></td>
+                            <td class="p-4">
+                                <div class="flex gap-2">
+                                    ${!isPaid ? `<button class="action-button mark-payroll-paid-button" data-payroll-id="${payrollId}">Mark as Paid</button>` : ''}
+                                    <button class="action-button view-payroll-details-button" data-payroll-id="${payrollId}">View Details</button>
+                                </div>
                             </td>
                         </tr>`;
                     
                     payrollHtml += `
                         <tr class="payroll-details-row" id="details-${payrollId}">
-                            <td colspan="7"> 
+                            <td colspan="5"> 
                                 <div class="payroll-details-content">`;
 
                     if (payrollData.jobs && payrollData.jobs.length > 0) {
@@ -325,14 +326,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error("DEBUG: Error calling addPayrollAdjustment function:", error);
-            const errorMessage = error.message || "Could not add adjustment. Check function logs for details.";
-            showGeneralMessage(addAdjustmentMessageEl, `Error: ${errorMessage}`, "error");
+            let errorMessage = "Error adding adjustment";
+            
+            // Provide more specific error messages
+            if (error.code === 'functions/not-found') {
+                errorMessage = "Payroll adjustment service is not available. Please contact support.";
+            } else if (error.code === 'functions/permission-denied') {
+                errorMessage = "You don't have permission to add payroll adjustments.";
+            } else if (error.code === 'functions/unauthenticated') {
+                errorMessage = "Authentication error. Please refresh the page and try again.";
+            } else if (error.message) {
+                errorMessage += `: ${error.message}`;
+            } else {
+                errorMessage = "Could not add adjustment. Check function logs for details.";
+            }
+            
+            showGeneralMessage(addAdjustmentMessageEl, errorMessage, "error");
         } finally {
             setFormDisabled(addAdjustmentForm, false);
         }
     }
 
     function setupPayrollPageListeners() {
+        // Setup payroll page listeners
+        
         if (payrollTableBodyEl) {
             const newPayrollTableBodyEl = payrollTableBodyEl.cloneNode(false); 
             payrollTableBodyEl.parentNode.replaceChild(newPayrollTableBodyEl, payrollTableBodyEl);
@@ -351,7 +368,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (detailsRow) {
                             detailsRow.classList.toggle('visible');
                             targetButton.textContent = detailsRow.classList.contains('visible') ? 'Hide Details' : 'View Details';
+                        } else {
+                            console.warn(`Details row not found for payroll ID: ${payrollId}`);
                         }
+                    } else {
+                        console.warn(`No payroll ID found on View Details button`);
                     }
                 }
             });
@@ -363,6 +384,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (addAdjustmentForm) {
             addAdjustmentForm.addEventListener('submit', handleAddAdjustmentSubmit);
             console.log("DEBUG: Listener attached to add adjustment form.");
+            
+            // Add cancel button functionality
+            const cancelButton = document.getElementById('cancel-adjustment');
+            if (cancelButton) {
+                cancelButton.addEventListener('click', () => {
+                    addAdjustmentForm.reset();
+                    showGeneralMessage(addAdjustmentMessageEl, "", "info"); // Clear any messages
+                    console.log("DEBUG: Payroll adjustment form reset");
+                });
+            }
         } else {
             console.warn("DEBUG: Add adjustment form not found.");
         }

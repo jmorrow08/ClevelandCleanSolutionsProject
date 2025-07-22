@@ -167,6 +167,68 @@
         .photo-item:hover {
             transform: scale(1.05);
         }
+        
+        /* Payroll Details Row Styles */
+        .payroll-details-row {
+            display: none; /* Hidden by default */
+        }
+        .payroll-details-row.visible {
+            display: table-row; /* Show as a table row */
+        }
+        .payroll-details-content {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px dashed #ddd;
+            border-radius: 6px;
+        }
+        .payroll-details-content h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .payroll-details-content ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .payroll-details-content .job-item,
+        .payroll-details-content .adjustment-item {
+            background-color: #fff;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            border-left: 3px solid #007cba;
+            font-size: 0.9em;
+        }
+        .payroll-details-content .label {
+            font-weight: 600;
+            color: #333;
+            margin-right: 5px;
+        }
+        .action-button {
+            padding: 4px 8px;
+            font-size: 0.85em;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+            color: #495057;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .action-button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+        .action-button.mark-payroll-paid-button {
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        .action-button.mark-payroll-paid-button:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-background font-sans">
@@ -253,9 +315,9 @@
             </div>
             
             <!-- Mobile Menu Button -->
-            <div class="md:hidden fixed top-4 left-4 z-30">
-                <button id="mobile-menu-toggle" class="p-3 bg-white rounded-lg shadow-lg border border-border hover:bg-secondary transition-colors" title="Open Menu">
-                    <i data-lucide="menu" class="h-5 w-5"></i>
+            <div class="md:hidden fixed top-4 right-4 z-30">
+                <button id="mobile-menu-toggle" class="p-4 bg-white rounded-lg shadow-lg border border-border hover:bg-secondary transition-colors" title="Open Menu">
+                    <i data-lucide="menu" class="h-7 w-7"></i>
                 </button>
             </div>
             
@@ -263,7 +325,7 @@
             <div id="main-content" class="main-content flex-1 ml-64 min-h-screen bg-background overflow-x-auto">
                 <!-- Dashboard View -->
                 <div id="view-dashboard" class="view-section active p-6 space-y-6">
-                    <div class="mb-6">
+                    <div class="mb-6 mt-4 md:mt-0">
                         <h2 class="text-3xl font-bold text-foreground mb-2">Dashboard</h2>
                         <p class="text-muted-foreground">Overview of your cleaning service operations</p>
                     </div>
@@ -329,19 +391,71 @@
                             </div>
                             <div class="card-content">
                                 <form id="quick-add-service-form" class="space-y-4">
+                                    <!-- Service Type Selection -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">Service Type</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                                <input type="radio" name="qas-service-mode" value="regular" id="qas-regular-service" class="mr-2" checked>
+                                                <div>
+                                                    <div class="font-medium">Regular Service</div>
+                                                    <div class="text-xs text-muted-foreground">Select from existing clients</div>
+                                                </div>
+                                            </label>
+                                            <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                                <input type="radio" name="qas-service-mode" value="custom" id="qas-custom-service" class="mr-2">
+                                                <div>
+                                                    <div class="font-medium">Custom Job</div>
+                                                    <div class="text-xs text-muted-foreground">One-off or special service</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Regular Service Fields -->
+                                    <div id="qas-regular-fields" class="space-y-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label for="qas-client-select" class="block text-sm font-medium mb-1">Client</label>
+                                                <select id="qas-client-select" class="w-full px-3 py-2 border border-border rounded-md">
+                                                    <option value="">-- Select Client --</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label for="qas-location-select" class="block text-sm font-medium mb-1">Location</label>
+                                                <select id="qas-location-select" class="w-full px-3 py-2 border border-border rounded-md">
+                                                    <option value="">-- Select Location --</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Custom Service Fields -->
+                                    <div id="qas-custom-fields" class="space-y-4 hidden">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label for="qas-custom-client" class="block text-sm font-medium mb-1">Client Name</label>
+                                                <input type="text" id="qas-custom-client" placeholder="Enter client name..." class="w-full px-3 py-2 border border-border rounded-md">
+                                            </div>
+                                            <div>
+                                                <label for="qas-custom-location" class="block text-sm font-medium mb-1">Location/Address</label>
+                                                <input type="text" id="qas-custom-location" placeholder="Enter location/address..." class="w-full px-3 py-2 border border-border rounded-md">
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label for="qas-custom-contact" class="block text-sm font-medium mb-1">Contact Info</label>
+                                                <input type="text" id="qas-custom-contact" placeholder="Phone or email..." class="w-full px-3 py-2 border border-border rounded-md">
+                                            </div>
+                                            <div>
+                                                <label for="qas-custom-price" class="block text-sm font-medium mb-1">Custom Price</label>
+                                                <input type="number" id="qas-custom-price" placeholder="0.00" step="0.01" min="0" class="w-full px-3 py-2 border border-border rounded-md">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Common Fields -->
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label for="qas-client-select" class="block text-sm font-medium mb-1">Client</label>
-                                            <select id="qas-client-select" class="w-full px-3 py-2 border border-border rounded-md">
-                                                <option value="">-- Select Client --</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label for="qas-location-select" class="block text-sm font-medium mb-1">Location</label>
-                                            <select id="qas-location-select" class="w-full px-3 py-2 border border-border rounded-md">
-                                                <option value="">-- Select Location --</option>
-                                            </select>
-                                        </div>
                                         <div>
                                             <label for="qas-service-date" class="block text-sm font-medium mb-1">Service Date</label>
                                             <input type="date" id="qas-service-date" class="w-full px-3 py-2 border border-border rounded-md">
@@ -352,8 +466,8 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label for="qas-service-type" class="block text-sm font-medium mb-1">Service Notes</label>
-                                        <textarea id="qas-service-type" rows="2" placeholder="Service type and notes..." class="w-full px-3 py-2 border border-border rounded-md"></textarea>
+                                        <label for="qas-service-type" class="block text-sm font-medium mb-1">Service Description & Notes</label>
+                                        <textarea id="qas-service-type" rows="2" placeholder="Service type, special instructions, additional services..." class="w-full px-3 py-2 border border-border rounded-md"></textarea>
                                     </div>
                                     <div id="qas-message" class="text-sm hidden"></div>
                                     <div class="flex gap-2">
@@ -388,22 +502,44 @@
                         </div>
                         <div class="card-content">
                             <div class="grid grid-cols-2 gap-4">
-                                <div class="text-center p-3 bg-yellow-50 rounded-lg border">
+                                <div class="text-center p-3 bg-yellow-50 rounded-lg border cursor-pointer hover:bg-yellow-100 transition-colors" onclick="showJobsByStatus('Scheduled')">
                                     <div class="text-xl font-bold text-yellow-600" id="pending-jobs-count">-</div>
                                     <div class="text-xs text-yellow-600">Pending Jobs</div>
+                                    <div class="text-xs text-gray-500 mt-1">Click to view</div>
                                 </div>
-                                <div class="text-center p-3 bg-blue-50 rounded-lg border">
+                                <div class="text-center p-3 bg-blue-50 rounded-lg border cursor-pointer hover:bg-blue-100 transition-colors" onclick="showJobsByStatus('In Progress')">
                                     <div class="text-xl font-bold text-blue-600" id="in-progress-jobs-count">-</div>
                                     <div class="text-xs text-blue-600">In Progress</div>
+                                    <div class="text-xs text-gray-500 mt-1">Click to view</div>
                                 </div>
-                                <div class="text-center p-3 bg-green-50 rounded-lg border">
+                                <div class="text-center p-3 bg-green-50 rounded-lg border cursor-pointer hover:bg-green-100 transition-colors" onclick="showJobsByStatus('Complete')">
                                     <div class="text-xl font-bold text-green-600" id="completed-jobs-count">-</div>
                                     <div class="text-xs text-green-600">Completed</div>
+                                    <div class="text-xs text-gray-500 mt-1">Click to view</div>
                                 </div>
-                                <div class="text-center p-3 bg-purple-50 rounded-lg border">
+                                <div class="text-center p-3 bg-purple-50 rounded-lg border cursor-pointer hover:bg-purple-100 transition-colors" onclick="showJobsByStatus('Scheduled')">
                                     <div class="text-xl font-bold text-purple-600" id="scheduled-jobs-count">-</div>
                                     <div class="text-xs text-purple-600">Scheduled</div>
+                                    <div class="text-xs text-gray-500 mt-1">Click to view</div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Services Awaiting Review -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="flex justify-between items-center">
+                                <h3 class="card-title">Services Awaiting Review</h3>
+                                <button id="refresh-awaiting-review" class="btn-secondary text-xs px-3 py-1">
+                                    <i data-lucide="refresh-cw" class="h-3 w-3 mr-1"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <div id="awaiting-review-list" class="space-y-2">
+                                <div class="text-muted-foreground text-sm">Loading services awaiting review...</div>
                             </div>
                         </div>
                     </div>
@@ -877,15 +1013,7 @@
                                              <option value="false">Inactive</option>
                                          </select>
                                      </div>
-                                     <div>
-                                         <label for="edit-employee-role" class="block text-sm font-medium mb-1">Employee Role</label>
-                                         <select id="edit-employee-role" class="w-full px-3 py-2 border border-border rounded-md">
-                                             <option value="employee">Employee</option>
-                                             <option value="admin">Admin</option>
-                                             <option value="manager">Manager</option>
-                                         </select>
-                                         <small class="text-xs text-muted-foreground">Changes employee's system access level</small>
-                                     </div>
+                                     <!-- Role management removed: roles are managed in Firebase directly -->
                                  </div>
                                                                  <div class="flex gap-2">
                                      <button type="submit" class="btn-primary">Update Employee</button>
@@ -911,38 +1039,6 @@
                                     <button type="button" id="cancel-employee-password" class="btn-secondary">Cancel</button>
                                 </div>
                                 <div id="employee-password-message" class="text-sm mt-2"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- User Role Management -->
-                    <div id="user-role-management-section" class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Role Management</h3>
-                        </div>
-                        <div class="card-content">
-                            <div class="space-y-4">
-                                <input type="hidden" id="role-mgmt-target-uid">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Current Roles</label>
-                                    <div id="current-roles-display" class="p-3 bg-gray-50 rounded border text-sm">
-                                        Loading roles...
-                                    </div>
-                                </div>
-                                <div>
-                                    <label for="role-select" class="block text-sm font-medium mb-1">Add Role</label>
-                                    <select id="role-select" class="w-full px-3 py-2 border border-border rounded-md">
-                                        <option value="">Select Role</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="manager">Manager</option>
-                                        <option value="employee">Employee</option>
-                                    </select>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button type="button" id="add-role-button" class="btn-primary">Add Role</button>
-                                    <button type="button" id="remove-role-button" class="btn-destructive">Remove Role</button>
-                                </div>
-                                <div id="role-management-message" class="text-sm mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -1292,10 +1388,8 @@
                                 <table id="payroll-table" class="w-full">
                                     <thead>
                                         <tr class="border-b">
+                                            <th class="text-left p-4 font-medium text-muted-foreground">Pay Period</th>
                                             <th class="text-left p-4 font-medium text-muted-foreground">Employee</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Jobs Completed</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Hours Worked</th>
-                                            <th class="text-left p-4 font-medium text-muted-foreground">Rate</th>
                                             <th class="text-left p-4 font-medium text-muted-foreground">Total Amount</th>
                                             <th class="text-left p-4 font-medium text-muted-foreground">Status</th>
                                             <th class="text-left p-4 font-medium text-muted-foreground">Actions</th>
@@ -1316,22 +1410,28 @@
                         </div>
                         <div class="card-content">
                             <form id="add-adjustment-form" class="space-y-4">
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label for="adjustment-employee-select" class="block text-sm font-medium mb-1">Employee</label>
-                                        <select id="adj-employee-select" class="w-full px-3 py-2 border border-border rounded-md">
-                                            <option value="">Select Employee</option>
+                                        <label for="adj-employee-select" class="block text-sm font-medium mb-1">Employee</label>
+                                        <select id="adj-employee-select" class="w-full px-3 py-2 border border-border rounded-md" required>
+                                            <option value="">-- Select Employee --</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="adjustment-amount" class="block text-sm font-medium mb-1">Adjustment Amount</label>
-                                        <input type="number" id="adjustment-amount" step="0.01" class="w-full px-3 py-2 border border-border rounded-md">
+                                        <label for="adj-pay-period-id" class="block text-sm font-medium mb-1">Pay Period ID</label>
+                                        <input type="text" id="adj-pay-period-id" placeholder="YYYY-MM-DD" class="w-full px-3 py-2 border border-border rounded-md" required>
+                                        <p class="text-xs text-muted-foreground mt-1">Start date of pay period (e.g., 2025-01-20)</p>
                                     </div>
                                     <div>
-                                        <label for="adjustment-reason" class="block text-sm font-medium mb-1">Reason</label>
-                                        <input type="text" id="adjustment-reason" placeholder="Reason for adjustment" class="w-full px-3 py-2 border border-border rounded-md">
+                                        <label for="adj-amount" class="block text-sm font-medium mb-1">Adjustment Amount ($)</label>
+                                        <input type="number" id="adj-amount" step="0.01" placeholder="e.g., 20.00 or -10.00" class="w-full px-3 py-2 border border-border rounded-md" required>
+                                    </div>
+                                    <div>
+                                        <label for="adj-reason" class="block text-sm font-medium mb-1">Reason</label>
+                                        <input type="text" id="adj-reason" placeholder="e.g., Gas reimbursement, Bonus" maxlength="200" class="w-full px-3 py-2 border border-border rounded-md" required>
                                     </div>
                                 </div>
+                                <div id="add-adjustment-message" class="text-sm hidden"></div>
                                 <div class="flex gap-2">
                                     <button type="submit" class="btn-primary">Add Adjustment</button>
                                     <button type="button" id="cancel-adjustment" class="btn-secondary">Cancel</button>
@@ -1510,6 +1610,86 @@
     <script src="js/admin-clients-locations.js"></script>
     <script src="js/admin-employees.js"></script>
     <script src="js/admin-service-history.js"></script>
-    <script src="js/admin-payroll.js"></script>
-</body>
+    <script src="js/admin-payroll.js">        </script>
+
+        <!-- Job Management Modal -->
+        <div id="job-management-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden mx-4">
+                <div class="flex justify-between items-center p-6 border-b">
+                    <h2 id="job-modal-title" class="text-xl font-bold">Manage Jobs</h2>
+                    <button id="close-job-modal" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                </div>
+                <div id="job-modal-content" class="p-6 overflow-y-auto max-h-[70vh]">
+                    <div class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p>Loading jobs...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Agreement Management Modal -->
+        <div id="service-agreement-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden mx-4">
+                <div class="flex justify-between items-center p-6 border-b">
+                    <h2 class="text-xl font-bold">Service Agreement Management</h2>
+                    <button id="close-agreement-modal" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                </div>
+                <div id="agreement-modal-content" class="p-6 overflow-y-auto max-h-[70vh]">
+                    <form id="service-agreement-form" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Client</label>
+                                <select id="agreement-client-select" class="w-full p-2 border rounded-lg">
+                                    <option value="">Select Client</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Service Frequency</label>
+                                <select id="agreement-frequency" class="w-full p-2 border rounded-lg">
+                                    <option value="weekly">Weekly</option>
+                                    <option value="bi-weekly">Bi-Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="one-time">One-Time</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Included Services</label>
+                            <div id="included-services-checkboxes" class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" value="general-cleaning" class="mr-2">
+                                    General Cleaning
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" value="deep-cleaning" class="mr-2">
+                                    Deep Cleaning
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" value="carpet-cleaning" class="mr-2">
+                                    Carpet Cleaning
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" value="window-cleaning" class="mr-2">
+                                    Window Cleaning
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Special Instructions</label>
+                            <textarea id="agreement-instructions" class="w-full p-2 border rounded-lg" rows="3"></textarea>
+                        </div>
+                        <div class="flex justify-end space-x-2">
+                            <button type="button" id="cancel-agreement" class="btn-secondary">Cancel</button>
+                            <button type="submit" class="btn-primary">Save Agreement</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </body>
 </html>

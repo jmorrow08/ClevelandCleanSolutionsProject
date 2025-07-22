@@ -5,9 +5,40 @@
 
 let currentView = 'dashboard';
 
+// Mobile sidebar functionality
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (sidebar && overlay) {
+        const isOpen = sidebar.classList.contains('sidebar-open');
+        
+        if (isOpen) {
+            sidebar.classList.remove('sidebar-open');
+            overlay.classList.remove('active');
+        } else {
+            sidebar.classList.add('sidebar-open');
+            overlay.classList.add('active');
+        }
+    }
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (sidebar && overlay) {
+        sidebar.classList.remove('sidebar-open');
+        overlay.classList.remove('active');
+    }
+}
+
 // Navigation function
 function showView(viewName) {
     console.log(`DEBUG EMP: Switching to view: ${viewName}`);
+    
+    // Close mobile sidebar when navigating
+    closeMobileSidebar();
     
     // Hide all views
     document.querySelectorAll('.view-section').forEach(view => {
@@ -50,7 +81,9 @@ function updateDashboardStats() {
     const clockStatus = document.getElementById('clock-status');
     
     if (dashboardClockStatus && clockStatus) {
-        dashboardClockStatus.textContent = clockStatus.textContent;
+        // Clean the clock status text to remove client names while preserving spacing
+        const cleanStatus = clockStatus.textContent.replace(/ *\([^)]*\) */g, " ").replace(/\s+/g, " ").trim();
+        dashboardClockStatus.textContent = cleanStatus;
     }
     
     if (dashboardClockIndicator) {
@@ -65,7 +98,9 @@ function updateDashboardStats() {
     const locationSelect = document.getElementById('location-select-input');
     if (dashboardLocation && locationSelect && locationSelect.value) {
         const selectedOption = locationSelect.options[locationSelect.selectedIndex];
-        dashboardLocation.textContent = selectedOption.text;
+        // Clean the location text to remove client names while preserving spacing
+        const cleanLocation = selectedOption.text.replace(/ *\([^)]*\) */g, " ").replace(/\s+/g, " ").trim();
+        dashboardLocation.textContent = cleanLocation;
     }
     
     // Update photos count
@@ -106,6 +141,30 @@ function setupNavigation() {
             element.addEventListener('click', () => showView(view));
         }
     });
+    
+    // Mobile sidebar functionality
+    document.getElementById('mobile-menu-button')?.addEventListener('click', toggleMobileSidebar);
+    document.getElementById('sidebar-overlay')?.addEventListener('click', closeMobileSidebar);
+    
+    // Close mobile sidebar on window resize if screen becomes larger
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            closeMobileSidebar();
+        }
+    });
+    
+    // Logout functionality
+    document.getElementById('logout-button')?.addEventListener('click', () => {
+        if (typeof auth !== 'undefined') {
+            auth.signOut().then(() => {
+                console.log("DEBUG EMP: User signed out.");
+                window.location.assign('/');
+            }).catch(e => {
+                console.error("DEBUG EMP: Error during sign out:", e);
+                window.location.assign('/');
+            });
+        }
+    });
 }
 
 // Call setupNavigation after other listeners are attached
@@ -142,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedFilesDisplayEl = document.getElementById('selected-files-display');
     const photoUploadNotesTextarea = document.getElementById('photo-upload-notes');
     const uploadButton = document.getElementById('upload-button');
+    // Upload button removed - now auto-uploading
     const uploadProgressEl = document.getElementById('upload-progress');
     const uploadMessageEl = document.getElementById('upload-message');
     const payrollLoadingMessageEl = document.getElementById('payroll-loading-message');
@@ -176,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("DEBUG EMP: Firebase service variables initialized. Setting up auth listener...");
 
     // --- Helper Functions ---
-    function redirectToLogin(m){ console.error("DEBUG EMP: Redirecting to login:", m); if(!window.location.pathname.endsWith('/') && !window.location.pathname.endsWith('/index.html')) { try{window.location.assign('/index.html');}catch(e){console.error("Redirect failed:",e);} } }
+    function redirectToLogin(m){ console.error("DEBUG EMP: Redirecting to login:", m); try{window.location.assign('/index.html');}catch(e){console.error("Redirect failed:",e);} }
     function showClockMessage(m,t='info'){if(clockMessageEl){clockMessageEl.textContent=m; clockMessageEl.className=t; clockMessageEl.style.display = m ? 'block' : 'none';}if(t==='error')console.error("EMP Clock Msg:",m);else console.log(`EMP Clock Msg (${t}): ${m}`);}
     function showUploadMessage(m,t='info'){if(uploadMessageEl){uploadMessageEl.textContent=m; uploadMessageEl.className=t; uploadMessageEl.style.display = m ? 'block' : 'none';}if(t==='error')console.error("EMP Upload Msg:",m);else console.log(`EMP Upload Msg (${t}): ${m}`);}
     function showPasswordMessage(m,t='error'){if(passwordMessageEl){passwordMessageEl.textContent=m;passwordMessageEl.className=`form-message ${t}`; passwordMessageEl.style.display = m ? 'block' : 'none';}}
@@ -228,9 +288,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if(clockOutButton)clockOutButton.disabled=d;
     }
     function setUploadButtonDisabled(d){
-        if(uploadButton)uploadButton.disabled=d;
+        // Disable camera and gallery inputs during upload
         if(cameraInput)cameraInput.disabled=d;
         if(galleryInput)galleryInput.disabled=d;
+        if(uploadButton)uploadButton.disabled=d;
         const labels = document.querySelectorAll('#upload-section label.action-button');
         labels.forEach(label => { if(d) { label.style.opacity = '0.5'; label.style.cursor = 'not-allowed'; } else { label.style.opacity = '1'; label.style.cursor = 'pointer'; } });
     }
@@ -248,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
               let optionsHtml = '<option value="">-- Select a Location --</option>';
               snapshot.forEach(doc => {
                   const loc = doc.data();
-                  optionsHtml += `<option value="${doc.id}">${escapeHtml(loc.locationName || 'Unnamed')} (${escapeHtml(loc.clientName || 'N/A')})</option>`;
+                  optionsHtml += `<option value="${doc.id}">${escapeHtml(loc.locationName || 'Unnamed')}</option>`;
               });
               if (locationSelectInput) locationSelectInput.innerHTML = optionsHtml;
           })
@@ -279,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!e.target || !e.target.files) return; 
         const newFiles = Array.from(e.target.files); 
         if (newFiles.length === 0) return;
-        showUploadMessage(`Processing ${newFiles.length} file(s)...`, 'info');
+        showUploadMessage(`Processing ${newFiles.length} photo(s)...`, 'info');
         setUploadButtonDisabled(true); 
         const processedFiles = [];
         for (const file of newFiles) {
@@ -292,11 +353,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         filesToUpload = filesToUpload.concat(processedFiles);
         if (selectedFilesDisplayEl) { 
-            selectedFilesDisplayEl.textContent = `Selected (${filesToUpload.length}): ${filesToUpload.map(f => escapeHtml(f.name)).join(', ')}`; 
+            selectedFilesDisplayEl.textContent = filesToUpload.length > 0 ? `Selected (${filesToUpload.length}): ${filesToUpload.map(f => escapeHtml(f.name)).join(', ')}` : 'No files selected'; 
         }
         e.target.value = null; 
-        showUploadMessage(filesToUpload.length > 0 ? `${filesToUpload.length} file(s) ready.` : 'No files processed.', 'info');
-        setUploadButtonDisabled(filesToUpload.length === 0);
+        setUploadButtonDisabled(false);
+        // Enable the upload button if files are selected
+        if (uploadButton) uploadButton.disabled = filesToUpload.length === 0;
     }
 
     function handleLogout() { auth.signOut().then(() => redirectToLogin("User signed out.")).catch(e => console.error("Sign out error", e)); }
@@ -322,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
         db.collection('employeeTimeTracking').add(timeEntryData)
         .then(d => {
             activeTimeEntryId = d.id; // Store the active time entry ID
-            const locText = locationSelectInput.options[locationSelectInput.selectedIndex]?.text || 'Selected Location';
+            const locText = locationSelectInput.options[locationSelectInput.selectedIndex]?.text?.replace(/ *\([^)]*\) */g, " ").replace(/\s+/g, " ").trim() || 'Selected Location';
             updateClockUI(true, `Clocked In @ ${locText} since ${new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}`);
             showClockMessage("Clocked In!", 'success');
         })
@@ -360,14 +422,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const files = filesToUpload; 
         const selectedLocationId = locationSelectInput.value; 
-        const selectedLocationName = locationSelectInput.options[locationSelectInput.selectedIndex]?.text?.replace(/ *\([^)]*\) */g, "").trim() || 'Unknown Location';
+        const selectedLocationName = locationSelectInput.options[locationSelectInput.selectedIndex]?.text?.replace(/ *\([^)]*\) */g, " ").replace(/\s+/g, " ").trim() || 'Unknown Location';
         const photoNotes = photoUploadNotesTextarea ? photoUploadNotesTextarea.value.trim() : null;
 
         if (!files || files.length === 0) { showUploadMessage("No photos selected.", 'error'); return; } 
         if (!selectedLocationId) { showUploadMessage("Please select a Location.", 'error'); return; }
 
-        setUploadButtonDisabled(true); showUploadMessage(`Uploading ${files.length} file(s)...`, 'info'); 
+        setUploadButtonDisabled(true); 
+        showUploadMessage(`📤 Uploading ${files.length} photo(s) to server...`, 'info'); 
         if (uploadProgressEl) uploadProgressEl.textContent = '';
+        
+        // Update the display to show upload in progress
+        if (selectedFilesDisplayEl) {
+            selectedFilesDisplayEl.innerHTML = `
+                <div class="flex items-center gap-2 text-blue-600">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span>Uploading ${files.length} photo(s)...</span>
+                </div>
+            `;
+        }
 
         let uploadPromises = [];
         files.forEach((file, i) => {
@@ -422,21 +495,48 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then((firestoreResults) => {
             if (firestoreResults && firestoreResults.length > 0) { 
-                showUploadMessage(`${firestoreResults.length} photo(s) uploaded & details saved!`, 'success');
+                showUploadMessage(`✅ ${firestoreResults.length} photo(s) successfully uploaded and saved!`, 'success');
                 if (photoUploadNotesTextarea) photoUploadNotesTextarea.value = ''; 
                 fetchAndDisplayMyUploadedPhotos(); // Auto-refresh list
             } else if (filesToUpload.length > 0 && successfulUploadsCount > 0) {
-                showUploadMessage("Photos uploaded but details may not have all saved.", 'warning');
+                showUploadMessage("⚠️ Photos uploaded but details may not have all saved.", 'warning');
                 fetchAndDisplayMyUploadedPhotos(); // Auto-refresh list
             }
         })
         .catch(err => {
-             showUploadMessage("Error: " + (err.message || "Upload/save process failed."), 'error');
+             showUploadMessage("❌ Error: " + (err.message || "Upload/save process failed."), 'error');
              console.error("Upload/Save Error:", err);
+             
+             // Update display to show error
+             if (selectedFilesDisplayEl) {
+                 selectedFilesDisplayEl.innerHTML = `
+                     <div class="text-red-600 font-medium">
+                         ❌ Upload failed. Please try again.
+                     </div>
+                 `;
+                 // Reset to default message after 5 seconds
+                 setTimeout(() => {
+                     if (selectedFilesDisplayEl) {
+                         selectedFilesDisplayEl.innerHTML = 'Select photos to upload automatically';
+                     }
+                 }, 5000);
+             }
         })
         .finally(() => {
             filesToUpload = []; 
-            if (selectedFilesDisplayEl) selectedFilesDisplayEl.textContent = ''; 
+            if (selectedFilesDisplayEl) {
+                selectedFilesDisplayEl.innerHTML = `
+                    <div class="text-green-600 font-medium">
+                        ✅ Upload complete! Photos are now saved in your account.
+                    </div>
+                `;
+                // Reset to default message after 3 seconds
+                setTimeout(() => {
+                    if (selectedFilesDisplayEl) {
+                        selectedFilesDisplayEl.innerHTML = 'Select photos to upload automatically';
+                    }
+                }, 3000);
+            }
             if (uploadProgressEl) uploadProgressEl.textContent = ''; 
             setUploadButtonDisabled(false);
             setTimeout(() => { if (uploadMessageEl && !uploadMessageEl.classList.contains('error')) { showUploadMessage('', 'info'); } }, 7000);
@@ -747,7 +847,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                   const p = profileDoc.data(); 
                                   currentEmployeeName = `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Employee';
                                   updateEmployeeName(currentEmployeeName); // Update sidebar name
-                                  if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome, ${currentEmployeeName}!`;
+                                  if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome, ${p.firstName || 'Employee'}!`;
                                   
                                   // Hide loading and show content
                                   const loadingEl = document.getElementById('employee-loading-message');
