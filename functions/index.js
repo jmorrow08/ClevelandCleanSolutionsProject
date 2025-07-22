@@ -82,8 +82,11 @@ exports.testAuthContext = functions
 exports.setAdminRole = functions
   .runWith({ memory: "256MB", timeoutSeconds: 60 })
   .https.onCall(async (data, context) => {
-    functions.logger.info("setAdminRole (v1.2) invoked by UID:", context.auth ? context.auth.uid : "No auth context");
-    
+    functions.logger.info(
+      "setAdminRole (v1.2) invoked by UID:",
+      context.auth ? context.auth.uid : "No auth context"
+    );
+
     if (!(context.auth && context.auth.token && context.auth.token.super_admin === true)) {
       functions.logger.error("setAdminRole: PERMISSION DENIED. Caller is not a super_admin.");
       throw new functions.https.HttpsError("permission-denied", "You do not have permission to set admin roles.");
@@ -107,7 +110,6 @@ exports.setAdminRole = functions
     try {
       functions.logger.info(`Setting role for target UID: ${targetUid} to: ${roleToSet}`);
       const userDocRef = db.collection("users").doc(targetUid);
-      const userDocSnapshot = await userDocRef.get();
       const firestoreUpdateData = { updatedAt: admin.firestore.Timestamp.fromDate(new Date()) };
 
       const targetUserAuthRecord = await admin.auth().getUser(targetUid);
@@ -140,15 +142,14 @@ exports.setAdminRole = functions
 
       // Set custom claims
       await admin.auth().setCustomUserClaims(targetUid, newClaims);
-      
+
       functions.logger.info(`Successfully set role for ${targetUid} to ${roleToSet} with claims:`, newClaims);
-      
+
       return {
         success: true,
         message: `Role successfully set to ${roleToSet}`,
         claims: newClaims,
       };
-
     } catch (error) {
       functions.logger.error(`Error setting role for ${targetUid}:`, error);
       throw new functions.https.HttpsError("internal", "Failed to set role", error.message);
