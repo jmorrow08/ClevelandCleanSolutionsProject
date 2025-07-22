@@ -1162,221 +1162,63 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("DEBUG: Setting up auth listener (admin-portal.js)...");
     
     auth.onAuthStateChanged(user => {
-        currentUser = user; // Keep currentUser updated for other functions
-        console.log("DEBUG: onAuthStateChanged triggered (admin.html). User:", user ? user.uid : 'null');
-
+        currentUser = user;
         if (user) {
             user.getIdTokenResult()
-                .then(async (idTokenResult) => {
+                .then((idTokenResult) => {
                     const claims = idTokenResult.claims;
-                    console.log(`DEBUG: Admin portal - User claims:`, claims);
-
-                    if (claims.admin === true || claims.super_admin === true || claims.standard_admin === true) {
-                        console.log(`DEBUG: Admin Dashboard - Admin claim found. Access GRANTED.`);
-                        if (adminLoadingMessageEl) adminLoadingMessageEl.style.display = 'none';
-                        if (dashboardContentEl) dashboardContentEl.style.display = 'block';
-                        else { console.error("CRITICAL ERROR: dashboardContentEl not found!"); return; }
-
-                        if (welcomeMessageEl) welcomeMessageEl.textContent = `Admin Dashboard (Logged in as: ${escapeHtml(user.email)})`;
+                    console.log("DEBUG AP: User claims:", claims);
+                    
+                    // Check for owner role or admin privileges
+                    const isOwner = claims.owner === true;
+                    const isAdmin = claims.admin === true || claims.super_admin === true;
+                    
+                    if (isOwner || isAdmin) {
+                        console.log("DEBUG AP: Admin/Owner access confirmed.");
                         
-                        const userDocRef = db.collection('users').doc(user.uid);
-                        try {
-                            const doc = await userDocRef.get();
-                            let firestoreUserRole = null;
-                            if (doc.exists) firestoreUserRole = doc.data().role;
-                            if (goToEmployeePortalLink) {
-                                if (firestoreUserRole === 'employee' || claims.admin === true || claims.super_admin === true || claims.standard_admin === true) {
-                                    goToEmployeePortalLink.style.display = 'inline-block';
+                        // Add portal toggle for owners
+                        if (isOwner) {
+                            const sidebar = document.querySelector('.sidebar') || document.querySelector('nav');
+                            if (sidebar) {
+                                const toggleButton = document.createElement('a');
+                                toggleButton.href = '/employee';
+                                toggleButton.className = 'btn-secondary w-full mb-2 flex items-center justify-center';
+                                toggleButton.innerHTML = `
+                                    <i data-lucide="users" class="h-4 w-4 mr-2"></i>
+                                    Switch to Employee Portal
+                                `;
+                                
+                                // Add the button at the bottom of the sidebar
+                                const existingButtons = sidebar.querySelector('.admin-footer') || sidebar.lastElementChild;
+                                if (existingButtons) {
+                                    sidebar.insertBefore(toggleButton, existingButtons);
                                 } else {
-                                    goToEmployeePortalLink.style.display = 'none';
+                                    sidebar.appendChild(toggleButton);
+                                }
+                                
+                                // Re-initialize icons
+                                if (typeof lucide !== 'undefined') {
+                                    lucide.createIcons();
                                 }
                             }
-                        } catch (firestoreError) {
-                             console.error("DEBUG: Admin portal - Error fetching user document from Firestore:", firestoreError);
-                             if (goToEmployeePortalLink && (claims.admin === true || claims.super_admin === true || claims.standard_admin === true)) {
-                                goToEmployeePortalLink.style.display = 'inline-block';
-                             }
                         }
                         
-                        if(adminSecuritySection) adminSecuritySection.style.display = 'block';
-                        if(changePasswordSection) changePasswordSection.style.display = 'none';
-                        if(showPasswordButtonContainer) showPasswordButtonContainer.style.display = 'block';
-
-                        await refreshDashboardLists(); // Initial load of dashboard lists
-
-                        // Update quick stats counts that are not derived from the lists above
-                        if(quickStatsActiveClientsEl) quickStatsActiveClientsEl.textContent = await fetchActiveClientCount();
-                        if(quickStatsActiveEmployeesEl) quickStatsActiveEmployeesEl.textContent = await fetchActiveEmployeeCount();
-
-                        // Populate Quick Add Service client dropdown on page load
-                        populateQASClientDropdown();
-
-                        // Load additional dashboard stats
-                                    loadJobStatusCounts();
-            loadPayrollStatus();
-            loadRecentServices();
-            loadEmployeeActivity();
-
-                        // Initialize payroll dropdown if function is available
-                        if (typeof window.populateEmployeeDropdownForAdjustments === 'function') {
-                            window.populateEmployeeDropdownForAdjustments();
-                        }
-
-
-                        if (!window.adminPortalModalListenersAttached) { // Use a more specific flag
-                            console.log("DEBUG: Attaching MODAL and other listeners for admin.html...");
-                            
-                            // Standard button listeners (mostly unchanged)
-                            if (logoutButton) { /* ... no change ... */ 
-                                logoutButton.addEventListener('click', () => {
-                                    auth.signOut().then(() => {
-                                        // onAuthStateChanged will handle redirect
-                                    }).catch(err => console.error("Admin dashboard logout error:", err));
-                                });
-                            }
-                            if (triggerPayrollButton) { triggerPayrollButton.addEventListener('click', handleTriggerPayrollProcessing); }
-
-                            // Dashboard payroll button
-                            const dashboardPayrollButton = document.getElementById('dashboard-process-payroll-button');
-                            if (dashboardPayrollButton) {
-                                dashboardPayrollButton.addEventListener('click', () => {
-                                    // Switch to payroll view and trigger processing
-                                    switchView('payroll');
-                                    setTimeout(() => {
-                                        const mainPayrollButton = document.getElementById('process-payroll-button');
-                                        if (mainPayrollButton) {
-                                            mainPayrollButton.click();
-                                        }
-                                    }, 100);
-                                });
-                            }
-                            if (changePasswordForm) { changePasswordForm.addEventListener('submit', handleChangePasswordSubmit); }
-                            if (showAdminPasswordFormBtn) { /* ... no change ... */ 
-                                showAdminPasswordFormBtn.addEventListener('click', () => { 
-                                    if (showPasswordButtonContainer) showPasswordButtonContainer.style.display = 'none'; 
-                                    if (changePasswordSection) changePasswordSection.style.display = 'block'; 
-                                    if (changePasswordForm) changePasswordForm.reset(); 
-                                    showPasswordMessage('', 'info'); 
-                                });
-                            }
-                            const actualCancelChangePasswordBtn = document.getElementById('cancel-change-password-btn');
-                            if (actualCancelChangePasswordBtn) { /* ... no change ... */
-                                actualCancelChangePasswordBtn.addEventListener('click', () => { 
-                                    if (changePasswordSection) changePasswordSection.style.display = 'none'; 
-                                    if (showPasswordButtonContainer) showPasswordButtonContainer.style.display = 'block'; 
-                                    showPasswordMessage('', 'info'); 
-                                });
-                            }
-                            if (quickAddServiceButton) { /* ... no change ... */
-                                quickAddServiceButton.addEventListener('click', () => {
-                                    if (quickAddServiceFormContainer) quickAddServiceFormContainer.style.display = 'block';
-                                    populateQASClientDropdown(); 
-                                    if(qasLocationSelect) {
-                                        qasLocationSelect.innerHTML = '<option value="">Select Client First</option>';
-                                        qasLocationSelect.disabled = true;
-                                    }
-                                    if (quickAddServiceForm) quickAddServiceForm.reset();
-                                    if (qasMessageEl) showFormMessage(qasMessageEl, '', 'info');
-                                });
-                            }
-                            if (qasClientSelect) { /* ... no change ... */ 
-                                qasClientSelect.addEventListener('change', (event) => {
-                                    populateQASLocationDropdown(event.target.value);
-                                });
-                            }
-                            if (qasCancelButton) { /* ... no change ... */
-                                qasCancelButton.addEventListener('click', () => {
-                                    if (quickAddServiceFormContainer) quickAddServiceFormContainer.style.display = 'none';
-                                });
-                            }
-                            if (quickAddServiceForm) { /* ... no change ... */
-                                quickAddServiceForm.addEventListener('submit', handleQuickAddServiceSubmit);
-                                
-                                // Service mode toggle listeners
-                                const regularServiceRadio = document.getElementById('qas-regular-service');
-                                const customServiceRadio = document.getElementById('qas-custom-service');
-                                const regularFields = document.getElementById('qas-regular-fields');
-                                const customFields = document.getElementById('qas-custom-fields');
-                                
-                                if (regularServiceRadio) {
-                                    regularServiceRadio.addEventListener('change', () => {
-                                        if (regularServiceRadio.checked) {
-                                            regularFields.classList.remove('hidden');
-                                            customFields.classList.add('hidden');
-                                        }
-                                    });
-                                }
-                                
-                                if (customServiceRadio) {
-                                    customServiceRadio.addEventListener('change', () => {
-                                        if (customServiceRadio.checked) {
-                                            customFields.classList.remove('hidden');
-                                            regularFields.classList.add('hidden');
-                                        }
-                                    });
-                                }
-                            }
-                            
-                            setupPasswordRevealListeners();    
-
-                            // --- NEW MODAL EVENT LISTENERS ---
-                            // Event delegation for dynamically added "Review & Finalize Job" / "Details" buttons
-                            document.body.addEventListener('click', function(event) {
-                                const targetButton = event.target.closest('.modal-trigger-button');
-                                if (targetButton) {
-                                    event.preventDefault(); 
-                                    const serviceId = targetButton.dataset.serviceId;
-                                    if (serviceId) {
-                                        console.log(`DEBUG AP: Modal trigger button clicked for service ID: ${serviceId}`);
-                                        openServiceEditorInModal(serviceId);
-                                    } else {
-                                        console.warn("DEBUG AP: Modal trigger button clicked, but no service-id found on button.", targetButton);
-                                    }
-                                }
-                            });
-
-                            // Modal close functionality already defined globally
-
-                            if (closeSHEditorModalButton) {
-                                closeSHEditorModalButton.addEventListener('click', closeModal);
-                            }
-
-                            // Close modal when clicking outside the modal content
-                            if (serviceHistoryEditorModal) {
-                                serviceHistoryEditorModal.addEventListener('click', (e) => {
-                                    // Only close if clicking the overlay itself, not the content
-                                    if (e.target === serviceHistoryEditorModal) {
-                                        closeModal();
-                                    }
-                                });
-                            }
-
-                            // Close modal with ESC key
-                            document.addEventListener('keydown', (e) => {
-                                if (e.key === 'Escape' && serviceHistoryEditorModal && serviceHistoryEditorModal.style.display === 'flex') {
-                                    closeModal();
-                                }
-                            });
-                            // --- END NEW MODAL EVENT LISTENERS ---
-
-                            // Add event listeners for new interactive features
-                            attachInteractiveFeatureListeners();
-
-                            window.adminPortalModalListenersAttached = true; 
-                            console.log("DEBUG: Modal and other listeners attached for admin.html.");
-                        }    
-                    } else { 
-                        redirectToLogin(`Admin Login Error: Required admin privileges not found. Access Denied.`);
+                        // Initialize admin portal
+                        initializeAdminPortal();
+                    } else {
+                        console.error("DEBUG AP: Access denied. User does not have sufficient admin claims.");
+                        window.location.href = 'index.html';
                     }
-                })    
-                .catch((error) => { 
-                    console.error("DEBUG: Admin portal - Error getting ID token result:", error); 
-                    redirectToLogin(`Failed to verify admin status. Access denied.`);
-                });    
-        } else { 
-            redirectToLogin("User is signed out. Please login.");
+                })
+                .catch((error) => {
+                    console.error("DEBUG AP: Error getting ID token result:", error);
+                    window.location.href = 'index.html';
+                });
+        } else {
+            console.log("DEBUG AP: No user signed in, redirecting to login.");
+            window.location.href = 'index.html';
         }
-    });    
+    });
 
     console.log("DEBUG: Initial script setup finished for admin.html.");
 });

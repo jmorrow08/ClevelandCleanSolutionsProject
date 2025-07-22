@@ -804,26 +804,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     auth.onAuthStateChanged(user => {
-        // MODIFIED: Store the auth 'user' object in the global 'currentUser'
         currentUser = user; 
         currentUserId = null; 
         currentEmployeeProfileId = null; 
         currentEmployeeName = null; 
         activeTimeEntryId = null;
 
-        if (currentUser) { // Use the global currentUser
+        if (currentUser) {
             currentUserId = currentUser.uid;
 
-            // ADDED: Logic to show/hide admin portal link based on custom claims
+            // MODIFIED: Enhanced logic for owner role
             currentUser.getIdTokenResult()
                 .then((idTokenResult) => {
                     const claims = idTokenResult.claims;
                     console.log("DEBUG EMP: User claims:", claims); 
-                    if (goToAdminPortalLink) { // Check if element exists
-                        if (claims.admin === true || claims.super_admin === true || claims.standard_admin === true) {
-                            goToAdminPortalLink.style.display = 'inline-block'; 
+                    
+                    // Check for owner role first
+                    if (goToAdminPortalLink) {
+                        if (claims.owner === true || userData.role === 'owner') {
+                            // Owner always sees the admin portal link
+                            goToAdminPortalLink.style.display = 'inline-block';
+                            goToAdminPortalLink.innerHTML = `
+                                <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
+                                Switch to Admin Portal
+                            `;
+                        } else if (claims.admin === true || claims.super_admin === true) {
+                            // Regular admin access
+                            goToAdminPortalLink.style.display = 'inline-block';
+                            goToAdminPortalLink.innerHTML = `
+                                <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
+                                Admin View
+                            `;
                         } else {
                             goToAdminPortalLink.style.display = 'none';
+                        }
+                        
+                        // Re-initialize icons
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
                         }
                     }
                 })
@@ -833,20 +851,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         goToAdminPortalLink.style.display = 'none';
                     }
                 });
-            // END ADDED Admin Portal Link Logic
 
             // Existing logic to fetch Firestore user data
             db.collection('users').doc(currentUser.uid).get().then((doc) => {
                 if (doc.exists) {
                     const userData = doc.data();
-                    if ((userData.role === 'employee' || userData.role === 'admin') && userData.profileId) { // Admins might also be employees
+                    // MODIFIED: Check for owner role or employee role
+                    if ((userData.role === 'owner' || userData.role === 'employee' || userData.role === 'admin') && userData.profileId) {
                         currentEmployeeProfileId = userData.profileId;
                         db.collection('employeeMasterList').doc(currentEmployeeProfileId).get()
                           .then(profileDoc => {
                               if (profileDoc.exists) {
                                   const p = profileDoc.data(); 
                                   currentEmployeeName = `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Employee';
-                                  updateEmployeeName(currentEmployeeName); // Update sidebar name
+                                  updateEmployeeName(currentEmployeeName);
                                   if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome, ${p.firstName || 'Employee'}!`;
                                   
                                   // Hide loading and show content
@@ -859,7 +877,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                   fetchPayrollData(); 
                                   populateLocationDropdown();
                                   fetchAndDisplayMyUploadedPhotos(); 
-                                  updateDashboardStats(); // Update dashboard stats
+                                  updateDashboardStats();
                                   
                                   if (!window.employeePortalListenersAttached) {
                                       attachAllListeners();
@@ -869,8 +887,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                   
                                   // Update dashboard stats periodically
                                   setTimeout(updateDashboardStats, 1000);
-                                  setInterval(updateDashboardStats, 30000); // Update every 30 seconds
-                                  setupNavigation(); // Setup navigation listeners
+                                  setInterval(updateDashboardStats, 30000);
+                                  setupNavigation();
                               } else { 
                                   redirectToLogin("Employee profile not found."); 
                               }
@@ -879,23 +897,15 @@ document.addEventListener('DOMContentLoaded', function() {
                               redirectToLogin("Error fetching employee profile.");
                           });
                     } else { 
-                        // If user is not an employee or admin with profileId (e.g. pure admin without employee profile)
-                        // or if they don't have a profileId.
-                        // They might still be an admin (checked by claims above for the link), 
-                        // but they can't use employee-specific functions here.
-                        // If there's no admin link visible and no employee functions, this effectively logs them out of employee view.
                         if (goToAdminPortalLink && goToAdminPortalLink.style.display === 'inline-block') {
-                            // Admin link is visible, so allow them to stay on page to use it.
-                            // Hide employee-specific content if necessary or show a message.
-                            if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome, Admin! (No employee profile loaded)`;
-                            if (dashboardContentEl) dashboardContentEl.style.display = 'block'; // Show header at least
-                             // Hide or disable employee specific sections if they are a non-employee admin
+                            if (welcomeMessageEl) welcomeMessageEl.textContent = `Welcome, ${userData.role === 'owner' ? 'Owner' : 'Admin'}!`;
+                            if (dashboardContentEl) dashboardContentEl.style.display = 'block';
+                            // Hide employee-specific sections for non-employee admins/owners
                             if (document.getElementById('clock-section')) document.getElementById('clock-section').style.display = 'none';
                             if (document.getElementById('upload-section')) document.getElementById('upload-section').style.display = 'none';
                             if (document.getElementById('my-uploads-section')) document.getElementById('my-uploads-section').style.display = 'none';
                             if (document.getElementById('job-notes-section')) document.getElementById('job-notes-section').style.display = 'none';
                             if (document.getElementById('payroll-section')) document.getElementById('payroll-section').style.display = 'none';
-
                         } else {
                             redirectToLogin("Access denied (not an active employee or no profile ID).");
                         }
@@ -915,7 +925,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (loadingEl) loadingEl.style.display = 'none';
             if (dashboardContentEl) dashboardContentEl.style.display = 'none';
             if (welcomeMessageEl) welcomeMessageEl.textContent = 'Please log in.';
-            if (goToAdminPortalLink) { // Ensure link is hidden if no user
+            if (goToAdminPortalLink) {
                 goToAdminPortalLink.style.display = 'none';
             }
             redirectToLogin("User is signed out."); 
