@@ -851,6 +851,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 
+                // Determine role flags
+                const isOwnerRole = (userData.role === 'owner');
+                const isEmployeeRole = (userData.role === 'employee');
+
+                // Owner users should not trigger employee-only features
+                if (isEmployeeRole) {
+                    checkClockStatus();
+                    fetchAndDisplayMyUploadedPhotos();
+                } else {
+                    console.log("DEBUG EMP: Skipping clock and upload checks for owner/admin role.");
+                }
+                
                 return { claims, userData, doc };
             }).then(({ claims, userData, doc }) => {
                 if (doc.exists) {
@@ -871,10 +883,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                   if (dashboardContentEl) dashboardContentEl.style.display = 'block';
                                   
                                   // Initialize page functions
-                                  checkClockStatus(); 
-                                  fetchPayrollData(); 
+                                  // checkClockStatus(); 
+                                  // fetchPayrollData(); 
                                   populateLocationDropdown();
-                                  fetchAndDisplayMyUploadedPhotos(); 
+                                  // fetchAndDisplayMyUploadedPhotos(); 
                                   updateDashboardStats();
                                   
                                   if (!window.employeePortalListenersAttached) {
