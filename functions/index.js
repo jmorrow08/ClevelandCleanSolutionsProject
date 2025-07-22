@@ -82,48 +82,27 @@ exports.testAuthContext = functions
 exports.setAdminRole = functions
   .runWith({ memory: "256MB", timeoutSeconds: 60 })
   .https.onCall(async (data, context) => {
-    functions.logger.info("setAdminRole (v1.1) invoked by UID:", context.auth ? context.auth.uid : "No auth context");
-    if (data && typeof data === "object") {
-      functions.logger.info("Raw data wrapper received. Top-level keys:", Object.keys(data));
-      if (Object.prototype.hasOwnProperty.call(data, "data") && typeof data.data === "object" && data.data !== null) {
-        functions.logger.info("Payload (data.data) received. Keys in data.data:", Object.keys(data.data));
-        functions.logger.info("Payload targetUid from data.data:", data.data.targetUid);
-        functions.logger.info("Payload roleToSet from data.data:", data.data.roleToSet);
-      } else {
-        functions.logger.warn("Payload (data.data) is missing, not an object, or is null.");
-      }
-    } else {
-      functions.logger.warn("Data received is not an object or is null/undefined.");
-    }
-
+    functions.logger.info("setAdminRole (v1.2) invoked by UID:", context.auth ? context.auth.uid : "No auth context");
+    
     const callerUid = context.auth ? context.auth.uid : null;
     if (!(context.auth && context.auth.token && context.auth.token.super_admin === true)) {
-      functions.logger.error("setAdminRole: PERMISSION DENIED. Caller is not a super_admin.", {
-        callerUid: callerUid,
-        claimsInfo: context.auth && context.auth.token ? "Token object exists" : "No token object",
-      });
+      functions.logger.error("setAdminRole: PERMISSION DENIED. Caller is not a super_admin.");
       throw new functions.https.HttpsError("permission-denied", "You do not have permission to set admin roles. Must be a super_admin.");
     }
-    functions.logger.info(`setAdminRole: Caller ${callerUid} validated as super_admin by custom claim.`);
 
     if (!data || !data.data || typeof data.data !== "object") {
-      functions.logger.error("setAdminRole: Invalid data structure received. Expected 'data.data' object.", { receivedData: data });
       throw new functions.https.HttpsError("invalid-argument", "Invalid data structure. Expected 'data.data' object.");
     }
     const { targetUid, roleToSet } = data.data;
 
     if (!targetUid || typeof targetUid !== "string" || targetUid.trim() === "") {
-      throw new functions.https.HttpsError("invalid-argument", "targetUid (in data.data) must be a non-empty string.");
-    }
-    const validRoles = ["super_admin", "admin", "employee", "client", "none_admin"];
-    if (!roleToSet || !validRoles.includes(roleToSet)) {
-      throw new functions.https.HttpsError("invalid-argument", `roleToSet (in data.data) must be one of: ${validRoles.join(", ")}.`);
+      throw new functions.https.HttpsError("invalid-argument", "targetUid must be a non-empty string.");
     }
 
-    if (callerUid === targetUid && roleToSet !== "super_admin" && context.auth.token.super_admin === true) {
-      if (roleToSet !== "super_admin") {
-        functions.logger.warn(`setAdminRole: Super_admin ${callerUid} attempted to change their own role to ${roleToSet}. This is restricted. They will remain super_admin.`);
-      }
+    // Add "owner" to valid roles
+    const validRoles = ["owner", "super_admin", "admin", "employee", "client", "none_admin"];
+    if (!roleToSet || !validRoles.includes(roleToSet)) {
+      throw new functions.https.HttpsError("invalid-argument", `roleToSet must be one of: ${validRoles.join(", ")}.`);
     }
 
     try {
@@ -133,74 +112,52 @@ exports.setAdminRole = functions
       let currentFirestoreUserRole = null;
       if (userDocSnapshot.exists) {
         currentFirestoreUserRole = userDocSnapshot.data().role;
-      } else {
-        functions.logger.warn(`User document users/${targetUid} not found. It will be created if a definitive role (not 'none_admin') is being set.`);
       }
 
       const targetUserAuthRecord = await admin.auth().getUser(targetUid);
       const currentAuthClaims = targetUserAuthRecord.customClaims || {};
-      const newClaims = { ...currentAuthClaims, admin: false, super_admin: false };
+      const newClaims = { ...currentAuthClaims };
       const firestoreUpdateData = { updatedAt: admin.firestore.Timestamp.fromDate(new Date()) };
-      let newFirestoreRole = null;
 
-      if (roleToSet === "super_admin") {
-        newClaims.admin = true; newClaims.super_admin = true;
-        newFirestoreRole = "super_admin";
+      // Reset all claims first
+      newClaims.admin = false;
+      newClaims.super_admin = false;
+      newClaims.owner = false;
+
+      // Set claims based on role
+      if (roleToSet === "owner") {
+        newClaims.admin = true;
+        newClaims.owner = true;
+        newClaims.super_admin = true; // Owner has all privileges
+        firestoreUpdateData.role = "owner";
+      } else if (roleToSet === "super_admin") {
+        newClaims.admin = true;
+        newClaims.super_admin = true;
+        firestoreUpdateData.role = "super_admin";
       } else if (roleToSet === "admin") {
-        newClaims.admin = true; newClaims.super_admin = false;
-        if (currentFirestoreUserRole === "employee") {
-          newFirestoreRole = "employee";
-          functions.logger.info(`User ${targetUid} is an employee. Granting 'admin' claims but keeping Firestore users.role as 'employee'.`);
-        } else {
-          newFirestoreRole = "admin";
-        }
+        newClaims.admin = true;
+        firestoreUpdateData.role = "admin";
       } else if (roleToSet === "employee" || roleToSet === "client") {
-        newClaims.admin = false; newClaims.super_admin = false;
-        newFirestoreRole = roleToSet;
-      } else if (roleToSet === "none_admin") {
-        newClaims.admin = false; newClaims.super_admin = false;
-        newFirestoreRole = currentFirestoreUserRole;
-        functions.logger.info(`Removing admin-level claims for ${targetUid}. Firestore users.role ('${newFirestoreRole}') will be preserved if it exists.`);
+        firestoreUpdateData.role = roleToSet;
       }
 
-      if (callerUid === targetUid && context.auth.token.super_admin === true) {
-        newClaims.admin = true; newClaims.super_admin = true;
-        newFirestoreRole = "super_admin";
-        if (roleToSet !== "super_admin") {
-          functions.logger.warn(`Super_admin ${callerUid} was editing self; claims and Firestore role forced to 'super_admin'.`);
-        }
-      }
+      // Update Firestore document
+      await userDocRef.set(firestoreUpdateData, { merge: true });
 
-      if (newFirestoreRole) {
-        firestoreUpdateData.role = newFirestoreRole;
-      }
-
+      // Set custom claims
       await admin.auth().setCustomUserClaims(targetUid, newClaims);
-      functions.logger.info(`Successfully set custom claims for UID ${targetUid}:`, newClaims);
+      
+      functions.logger.info(`Successfully set role for ${targetUid} to ${roleToSet} with claims:`, newClaims);
+      
+      return {
+        success: true,
+        message: `Role successfully set to ${roleToSet}`,
+        claims: newClaims
+      };
 
-      if (userDocSnapshot.exists) {
-        await userDocRef.update(firestoreUpdateData);
-        functions.logger.info(`Updated existing Firestore users/${targetUid} with:`, firestoreUpdateData);
-      } else if (newFirestoreRole && newFirestoreRole !== "none_admin") {
-        firestoreUpdateData.createdAt = admin.firestore.Timestamp.fromDate(new Date());
-        if (targetUserAuthRecord.email) {
-          firestoreUpdateData.email = targetUserAuthRecord.email;
-        }
-        await userDocRef.set(firestoreUpdateData); // Use .set() not .set(firestoreUpdateData, { merge: true }) if you want to ensure it creates or fully overwrites. Using .set() is fine here.
-        functions.logger.info(`Created new Firestore users/${targetUid} with:`, firestoreUpdateData);
-      } else {
-        functions.logger.info(`No Firestore update needed for users/${targetUid}.`);
-      }
-      return { success: true, message: `Successfully set claims and user role for UID ${targetUid} based on '${roleToSet}'.` };
     } catch (error) {
-      functions.logger.error(`setAdminRole: Error during claim/role update for UID ${targetUid}:`, error);
-      if (error instanceof functions.https.HttpsError) {
-        throw error;
-      }
-      if (error.code === "auth/user-not-found") {
-        throw new functions.https.HttpsError("not-found", `User with UID ${targetUid} does not exist in Firebase Auth.`);
-      }
-      throw new functions.https.HttpsError("internal", "An internal error occurred while setting user roles.", error.message);
+      functions.logger.error(`Error setting role for ${targetUid}:`, error);
+      throw new functions.https.HttpsError("internal", "Failed to set role", error.message);
     }
   });
 

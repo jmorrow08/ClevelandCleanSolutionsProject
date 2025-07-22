@@ -4,34 +4,26 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // --- Helper Functions ---
+    // (No changes needed here)
     function isLoggedIn() {
       return request.auth != null;
     }
-    
     function hasClaim(role) {
       return request.auth != null && request.auth.token != null && request.auth.token[role] == true;
     }
-    
-    function isOwner() {
-      return hasClaim('owner');
-    }
-    
     function getUserData(userId) {
       return exists(/databases/$(database)/documents/users/$(userId)) ?
              get(/databases/$(database)/documents/users/$(userId)).data : null;
     }
-    
     function hasRoleInFirestore(userId, role) {
       let userData = getUserData(userId);
       return userData != null && userData.role == role;
     }
-    
     function isProfileOwner(profileDocId) {
       return isLoggedIn() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              getUserData(request.auth.uid).profileId == profileDocId;
     }
-    
     function isResourceOwner(userId) {
       return isLoggedIn() && request.auth.uid == userId;
     }
@@ -39,10 +31,10 @@ service cloud.firestore {
     // --- users Collection Rules ---
     match /users/{userId} {
       // Allow users to read their own document without requiring custom claims (for login flow)
-      // OR admin/owner to read any document
-      allow read: if isLoggedIn() && (request.auth.uid == userId || hasClaim('admin') || isOwner());
+      // OR admin to read any document
+      allow read: if isLoggedIn() && (request.auth.uid == userId || hasClaim('admin'));
       allow create: if false; // Cloud Functions handle creation
-      allow update: if hasClaim('admin') || hasClaim('super_admin') || isOwner(); // Only admins/owners can update user docs directly
+      allow update: if hasClaim('admin'); // Only admins can update user docs directly
       allow delete: if false; // Deletion handled by Cloud Function
     }
 
@@ -61,33 +53,36 @@ service cloud.firestore {
       }
 
       // Allow reading for clients by email match or profile ownership
-      allow read: if hasClaim('admin') || isOwner() || 
+      allow read: if hasClaim('admin') || 
                      (hasClaim('client') && isProfileOwner(clientDocId)) || 
                      isProfileOwner(clientDocId) ||
                      isClientEmailMatch();
-      allow create: if hasClaim('admin') || isOwner();
-      allow update: if hasClaim('admin') || isOwner() ||
+      allow create: if hasClaim('admin');
+      allow update: if hasClaim('admin') ||
                        (hasClaim('client') && isProfileOwner(clientDocId) && clientCanUpdateProfileFields()) ||
                        (isClientEmailMatch() && clientCanUpdateProfileFields());
-      allow delete: if hasClaim('admin') || isOwner();
+      allow delete: if hasClaim('admin');
     }
 
     // --- employeeMasterList Rules ---
-    match /employeeMasterList/{employeeDocId} {
-      function employeeCanUpdateProfileFields() {
-        let allowedKeys = ['phone', 'firstName', 'lastName', 'updatedAt'];
-        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys) &&
-               request.resource.data.updatedAt is timestamp;
-      }
+match /employeeMasterList/{employeeDocId} {
+  function employeeCanUpdateProfileFields() {
+    let allowedKeys = ['phone', 'firstName', 'lastName', 'updatedAt'];
+    return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys) &&
+           request.resource.data.updatedAt is timestamp;
+  }
 
-      // Allow reading for admins, owners, or the employee themselves
-      allow read: if hasClaim('admin') || isOwner() || 
-                     (hasClaim('employee') && isProfileOwner(employeeDocId));
-      allow create: if hasClaim('admin') || isOwner();
-      allow update: if hasClaim('admin') || isOwner() ||
-                       (hasClaim('employee') && isProfileOwner(employeeDocId) && employeeCanUpdateProfileFields());
-      allow delete: if hasClaim('admin') || isOwner();
-    }
+  // Allow reading for login flow - more permissive approach
+  allow read: if hasClaim('admin') || // Admins can always read
+                (isLoggedIn() && // User must be logged in
+                 hasRoleInFirestore(request.auth.uid, 'employee') && // Their role in /users/{uid} must be 'employee'
+                 isProfileOwner(employeeDocId)) || // And they must be the owner of this profile
+                isProfileOwner(employeeDocId); // OR just allow profile owners to read (for login flow)
+
+  allow create: if hasClaim('admin');
+  allow update: if hasClaim('admin') || (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isProfileOwner(employeeDocId) && employeeCanUpdateProfileFields());
+  allow delete: if hasClaim('admin');
+}
 
     // --- locations Collection Rules ---
     match /locations/{locationDocId} {
