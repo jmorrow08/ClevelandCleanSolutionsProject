@@ -140,48 +140,6 @@
                     });
             });
         }
-        
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                user.getIdTokenResult().then((idTokenResult) => {
-                    const claims = idTokenResult.claims;
-                    const role = claims.role || 'none';
-                    
-                    // Handle owner role
-                    if (claims.owner === true) {
-                        window.location.assign('/employee');
-                        return;
-                    }
-                    
-                    // Handle admin roles
-                    if (claims.admin === true || claims.super_admin === true) {
-                        window.location.assign('/admin');
-                        return;
-                    }
-                    
-                    // Handle employee role
-                    if (role === 'employee') {
-                        window.location.assign('/employee');
-                        return;
-                    }
-                    
-                    // Handle client role
-                    if (role === 'client') {
-                        window.location.assign('/client');
-                        return;
-                    }
-                    
-                    // Default case - no valid role
-                    console.error("No valid role found for user");
-                    auth.signOut().then(() => {
-                        showLoginMessage('No valid role assigned. Please contact support.', 'error');
-                    });
-                }).catch(error => {
-                    console.error("Error getting user claims:", error);
-                    showLoginMessage('Error verifying user role. Please try again.', 'error');
-                });
-            }
-        });
     </script>
 </body>
 </html>
