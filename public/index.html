@@ -143,38 +143,43 @@
         
         auth.onAuthStateChanged(user => {
             if (user) {
-                if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-                    db.collection('users').doc(user.uid).get().then(doc => {
-                        if (doc.exists) {
-                            const userData = doc.data();
-                            const role = userData.role;
-                            console.log("Login successful, user role from Firestore:", role);
-
-                            // MODIFIED: Check for owner role first
-                            if (role === 'owner') {
-                                // Owners default to employee portal
-                                window.location.assign('/employee');
-                            } else if (role === 'admin' || role === 'super_admin' || role === 'standard_admin') {
-                                window.location.assign('/admin');
-                            } else if (role === 'employee') {
-                                window.location.assign('/employee');
-                            } else if (role === 'client') {
-                                window.location.assign('/client');
-                            } else {
-                                showLoginMessage('Role not recognized or insufficient permissions. Access denied.', 'error');
-                                auth.signOut();
-                            }
-                        } else {
-                            showLoginMessage('User data not found after login. Please contact support.', 'error');
-                            auth.signOut();
-                        }
-                    }).catch(err => {
-                        console.error("Error checking role on login page auth state change:", err);
-                        showLoginMessage('Error checking user role. Please try again.', 'error');
+                user.getIdTokenResult().then((idTokenResult) => {
+                    const claims = idTokenResult.claims;
+                    const role = claims.role || 'none';
+                    
+                    // Handle owner role
+                    if (claims.owner === true) {
+                        window.location.assign('/employee');
+                        return;
+                    }
+                    
+                    // Handle admin roles
+                    if (claims.admin === true || claims.super_admin === true) {
+                        window.location.assign('/admin');
+                        return;
+                    }
+                    
+                    // Handle employee role
+                    if (role === 'employee') {
+                        window.location.assign('/employee');
+                        return;
+                    }
+                    
+                    // Handle client role
+                    if (role === 'client') {
+                        window.location.assign('/client');
+                        return;
+                    }
+                    
+                    // Default case - no valid role
+                    console.error("No valid role found for user");
+                    auth.signOut().then(() => {
+                        showLoginMessage('No valid role assigned. Please contact support.', 'error');
                     });
-                }
-            } else {
-                console.log("Login page: No user currently signed in.");
+                }).catch(error => {
+                    console.error("Error getting user claims:", error);
+                    showLoginMessage('Error verifying user role. Please try again.', 'error');
+                });
             }
         });
     </script>
