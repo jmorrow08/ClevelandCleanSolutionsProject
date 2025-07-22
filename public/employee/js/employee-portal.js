@@ -813,49 +813,47 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentUser) {
             currentUserId = currentUser.uid;
 
-            // MODIFIED: Enhanced logic for owner role
-            currentUser.getIdTokenResult()
-                .then((idTokenResult) => {
-                    const claims = idTokenResult.claims;
-                    console.log("DEBUG EMP: User claims:", claims); 
-                    
-                    // Check for owner role first
-                    if (goToAdminPortalLink) {
-                        if (claims.owner === true || userData.role === 'owner') {
-                            // Owner always sees the admin portal link
-                            goToAdminPortalLink.style.display = 'inline-block';
-                            goToAdminPortalLink.innerHTML = `
-                                <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
-                                Switch to Admin Portal
-                            `;
-                        } else if (claims.admin === true || claims.super_admin === true) {
-                            // Regular admin access
-                            goToAdminPortalLink.style.display = 'inline-block';
-                            goToAdminPortalLink.innerHTML = `
-                                <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
-                                Admin View
-                            `;
-                        } else {
-                            goToAdminPortalLink.style.display = 'none';
-                        }
-                        
-                        // Re-initialize icons
-                        if (typeof lucide !== 'undefined') {
-                            lucide.createIcons();
-                        }
-                    }
-                })
-                .catch((error) => {
-                    console.error("DEBUG EMP: Error getting ID token result:", error);
-                    if (goToAdminPortalLink) {
+            // Get both claims and Firestore data to determine portal access
+            Promise.all([
+                currentUser.getIdTokenResult(),
+                db.collection('users').doc(currentUser.uid).get()
+            ]).then(([idTokenResult, doc]) => {
+                const claims = idTokenResult.claims;
+                console.log("DEBUG EMP: User claims:", claims);
+                
+                const userData = doc.exists ? doc.data() : {};
+                
+                // Check for owner role first - show admin portal switch
+                if (goToAdminPortalLink) {
+                    if (claims.owner === true || userData.role === 'owner') {
+                        // Owner always sees the admin portal link
+                        goToAdminPortalLink.style.display = 'inline-block';
+                        goToAdminPortalLink.innerHTML = `
+                            <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
+                            Switch to Admin Portal
+                        `;
+                        goToAdminPortalLink.href = '/admin';
+                    } else if (claims.admin === true || claims.super_admin === true) {
+                        // Regular admin access
+                        goToAdminPortalLink.style.display = 'inline-block';
+                        goToAdminPortalLink.innerHTML = `
+                            <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
+                            Admin View
+                        `;
+                        goToAdminPortalLink.href = '/admin';
+                    } else {
                         goToAdminPortalLink.style.display = 'none';
                     }
-                });
-
-            // Existing logic to fetch Firestore user data
-            db.collection('users').doc(currentUser.uid).get().then((doc) => {
+                    
+                    // Re-initialize icons
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                }
+                
+                return { claims, userData, doc };
+            }).then(({ claims, userData, doc }) => {
                 if (doc.exists) {
-                    const userData = doc.data();
                     // MODIFIED: Check for owner role or employee role
                     if ((userData.role === 'owner' || userData.role === 'employee' || userData.role === 'admin') && userData.profileId) {
                         currentEmployeeProfileId = userData.profileId;
@@ -914,10 +912,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     redirectToLogin("User data not found in Firestore."); 
                 }
             }).catch((error) => {
-                console.error("DEBUG EMP: Error getting user data from Firestore.", error);
+                console.error("DEBUG EMP: Error getting user data or claims:", error);
                 const loadingEl = document.getElementById('employee-loading-message');
                 if (loadingEl) loadingEl.style.display = 'none';
-                redirectToLogin("Error getting user data.");
+                if (goToAdminPortalLink) {
+                    goToAdminPortalLink.style.display = 'none';
+                }
+                redirectToLogin("Error getting user data or authentication.");
             });
         } else { 
             // No user signed in
