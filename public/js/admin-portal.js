@@ -1204,7 +1204,30 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         
                         // Initialize admin portal
-                        initializeAdminPortal();
+                        console.log("DEBUG AP: Initializing admin portal for user with valid claims.");
+                        if (adminLoadingMessageEl) adminLoadingMessageEl.style.display = 'none';
+                        if (dashboardContentEl) dashboardContentEl.style.display = 'block';
+                        
+                        // Load dashboard data
+                        setTimeout(async () => {
+                            try {
+                                await Promise.all([
+                                    loadJobStatusCounts(),
+                                    loadPayrollStatus(),
+                                    loadRecentServices(),
+                                    loadEmployeeActivity(),
+                                    fetchActiveClientCount().then(count => {
+                                        if (quickStatsActiveClientsEl) quickStatsActiveClientsEl.textContent = count;
+                                    }),
+                                    fetchActiveEmployeeCount().then(count => {
+                                        if (quickStatsActiveEmployeesEl) quickStatsActiveEmployeesEl.textContent = count;
+                                    })
+                                ]);
+                                console.log("DEBUG AP: Dashboard data loaded successfully.");
+                            } catch (error) {
+                                console.error("DEBUG AP: Error loading dashboard data:", error);
+                            }
+                        }, 100);
                     } else {
                         console.error("DEBUG AP: Access denied. User does not have sufficient admin claims.");
                         window.location.href = 'index.html';
