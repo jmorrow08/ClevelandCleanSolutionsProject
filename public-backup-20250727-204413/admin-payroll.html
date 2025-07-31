@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - View Payroll</title>
+    <link rel="stylesheet" href="css/admin-styles.css"> 
+    <style>
+        /* Additional styles for the details row - can be moved to admin-styles.css */
+        .payroll-details-row {
+            display: none; /* Hidden by default */
+        }
+        .payroll-details-row.visible {
+            display: table-row; /* Show as a table row */
+        }
+        .payroll-details-content {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px dashed #ddd;
+        }
+        .payroll-details-content h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 1.1em;
+        }
+        .payroll-details-content ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin-bottom: 15px;
+        }
+        .payroll-details-content ul li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.95em;
+        }
+        .payroll-details-content ul li:last-child {
+            border-bottom: none;
+        }
+        .job-item span, .adjustment-item span {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .job-item .label, .adjustment-item .label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Styles for adjustment form (can be moved to admin-styles.css) */
+        #add-adjustment-section { margin-top: 30px; padding-top: 20px; border-top: 2px solid #007bff; }
+        #add-adjustment-section h4 { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div id="admin-dashboard-content"> <div style="padding: 15px 0; border-bottom: 1px solid #eee; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <a href="admin.html" class="admin-action-button" style="background-color: #6c757d; text-decoration: none; color: white; padding: 10px 15px; border-radius: 5px;">&laquo; Back to Main Admin Dashboard</a>
+            <h2 style="margin: 0; color: #333;">Employee Payroll Records</h2>
+        </div>
+
+        <div id="payroll-viewing-section" class="form-section" style="display: block;"> 
+            <p id="payroll-loading-message">Loading payroll records...</p>
+            <div class="table-wrapper">
+                <table id="payroll-table" style="width: 100%; border-collapse: collapse; display: none;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #ccc; text-align: left;">
+                            <th style="padding: 8px;">Pay Period Start</th>
+                            <th style="padding: 8px;">Pay Period End</th>
+                            <th style="padding: 8px;">Employee</th>
+                            <th style="padding: 8px;">Total Earnings</th>
+                            <th style="padding: 8px;">Status</th>
+                            <th style="padding: 8px;" colspan="2">Actions</th> 
+                        </tr>
+                    </thead>
+                    <tbody id="payroll-table-body">
+                        </tbody>
+                </table>
+            </div>
+            <p id="no-payroll-message" style="display: none;">No payroll records found.</p>
+            <div id="payroll-action-message" class="form-message" style="margin-top: 15px;"></div>
+        </div>
+
+        <div id="add-adjustment-section" class="form-section">
+            <h4>Add Payroll Adjustment</h4>
+            <form id="add-adjustment-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="adj-employee-select">Employee:</label>
+                        <select id="adj-employee-select" required>
+                            <option value="">-- Loading Employees --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="adj-pay-period-id">Pay Period ID (e.g., YYYY-MM-DD of start):</label>
+                        <input type="text" id="adj-pay-period-id" placeholder="YYYY-MM-DD" required>
+                        <small><i>Enter the start date of the pay period. Matches existing payroll record IDs.</i></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="adj-amount">Adjustment Amount ($):</label>
+                        <input type="number" id="adj-amount" step="0.01" required placeholder="e.g., 20.00 or -10.00">
+                        <small><i>Positive for bonus/reimbursement, negative for deduction.</i></small>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="adj-reason">Reason for Adjustment:</label>
+                        <input type="text" id="adj-reason" required maxlength="200" placeholder="e.g., Gas reimbursement, Bonus for excellent work">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="save-adjustment-button" class="save-button">Add Adjustment</button>
+                </div>
+            </form>
+            <div id="add-adjustment-message" class="form-message" style="margin-top: 10px;"></div>
+        </div>
+        </div> <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJEuOcNLg8dYtzhMEyhMZtidfIXNALcgU",
+            authDomain: "cleveland-clean-portal.firebaseapp.com",
+            projectId: "cleveland-clean-portal",
+            storageBucket: "cleveland-clean-portal.firebasestorage.app", 
+            messagingSenderId: "938625547862",
+            appId: "1:938625547862:web:3655b2b380b858702705f7",
+            measurementId: "G-7KZMMKZ1XW"
+        };
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        } else {
+            firebase.app(); 
+        }
+    </script>
+
+    <script src="js/admin-payroll.js"></script> 
+</body>
+</html>

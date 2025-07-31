@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Client & Location Management</title>
+    <link rel="stylesheet" href="css/admin-styles.css"> 
+</head>
+<body>
+    <div id="admin-dashboard-content"> 
+        <div style="padding: 15px 0; border-bottom: 1px solid #eee; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <a href="admin.html" class="admin-action-button" style="background-color: #6c757d; text-decoration: none; color: white; padding: 10px 15px; border-radius: 5px;">&laquo; Back to Main Admin Dashboard</a>
+            <h2 style="margin: 0; color: #333;">Client & Location Management</h2>
+        </div>
+
+        <div id="client-list-section" style="margin-bottom: 30px; display: block;">
+            <h3>Client List</h3> 
+            <button id="show-add-client-form-button-page" class="admin-action-button" style="margin-bottom:10px;">Add New Client</button>
+            <p id="client-loading-message">Loading clients...</p>
+            <div class="table-wrapper"> 
+                <table id="client-table" style="width: 100%; border-collapse: collapse; display: none;"> 
+                    <thead> 
+                        <tr style="border-bottom: 1px solid #ccc; text-align: left;"> 
+                            <th style="padding: 8px;">Company Name</th> 
+                            <th style="padding: 8px;">Contact Name</th> 
+                            <th style="padding: 8px;">Email</th> 
+                            <th style="padding: 8px;">Phone</th> 
+                            <th style="padding: 8px;">Client ID</th> 
+                            <th style="padding: 8px;">Status</th> 
+                            <th style="padding: 8px;">Actions</th> 
+                        </tr> 
+                    </thead> 
+                    <tbody id="client-table-body"></tbody> 
+                </table> 
+            </div>
+            <p id="no-clients-message" style="display: none;">No clients found.</p>
+        </div>
+
+        <div id="add-client-form-section" class="form-section" style="display: none; margin-top: 20px;">
+            <h3>Add New Client</h3>
+            <form id="add-client-form">
+                <div class="form-grid">
+                    <div class="form-group"> <label for="client-company-name">Company Name:</label> <input type="text" id="client-company-name" required> </div>
+                    <div class="form-group"> <label for="client-contact-name">Contact Name:</label> <input type="text" id="client-contact-name" required> </div>
+                    <div class="form-group"> <label for="client-id-string">Client ID String:</label> <input type="text" id="client-id-string" placeholder="e.g., CCS-1001" required> <small><i>Enter unique ID.</i></small> </div>
+                    <div class="form-group"> <label for="client-email">Email:</label> <input type="email" id="client-email" required> </div>
+                    <div class="form-group"> <label for="client-phone">Phone:</label> <input type="tel" id="client-phone"> </div>
+                    <div class="form-group"> <label for="client-initial-password">Initial Password:</label> <input type="password" id="client-initial-password" required minlength="6"> </div>
+                </div>
+                <div class="form-actions"> <button type="submit" class="save-button">Create Client</button> <button type="button" class="cancel-button" id="cancel-add-client-form">Cancel</button> </div>
+                <div id="add-client-message" class="form-message"></div>
+            </form>
+        </div>
+
+        <div id="edit-client-form-section" class="form-section" style="display: none; margin-top: 20px;">
+            <h3>Edit Client Profile</h3>
+            <form id="edit-client-form">
+                <input type="hidden" id="edit-client-uid">
+                <input type="hidden" id="edit-client-auth-uid">
+                <div class="form-grid">
+                    <div class="form-group"> <label for="edit-client-company-name">Company Name:</label> <input type="text" id="edit-client-company-name" required> </div>
+                    <div class="form-group"> <label for="edit-client-contact-name">Contact Name:</label> <input type="text" id="edit-client-contact-name" required> </div>
+                    <div class="form-group"> <label for="edit-client-email">Email:</label> <input type="email" id="edit-client-email" required readonly> <small><i>(Email/Login cannot be changed)</i></small> </div>
+                    <div class="form-group"> <label for="edit-client-phone">Phone:</label> <input type="tel" id="edit-client-phone"> </div>
+                    <div class="form-group"> <label for="edit-client-id-string">Client ID String:</label> <input type="text" id="edit-client-id-string" readonly> </div>
+                    <div class="form-group"> <label for="edit-client-status">Status:</label> <select id="edit-client-status" required> <option value="true">Active</option> <option value="false">Inactive</option> </select> </div>
+                </div>
+                <div class="form-actions"> <button type="submit" class="save-button">Save Client Changes</button> <button type="button" class="cancel-button" id="cancel-edit-client-form">Cancel</button> </div>
+                <div id="edit-client-message" class="form-message"></div>
+                <hr style="margin-top: 25px; margin-bottom: 15px;">
+                <h4>Set New Password for Client</h4>
+                <div class="form-group" style="display: flex; align-items: center; gap: 5px;">
+                    <div style="flex-grow: 1;">
+                        <label for="set-client-new-password-input" style="margin-bottom: 2px;">New Password:</label>
+                        <input type="password" id="set-client-new-password-input" minlength="6" style="max-width: 400px;">
+                    </div>
+                    <button type="button" class="reveal-password-btn" data-target="set-client-new-password-input" title="Show/Hide password" style="padding: 5px 8px; line-height: 1; height: 35px; margin-top: 20px; background-color: #6c757d; color: white;">👁️</button>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="set-client-new-password-button" class="admin-action-button" style="background-color: #dc3545;">Set Client Password</button>
+                    <small style="display: block; margin-top: 5px;"><i>This will immediately change the client's login password. Use with caution.</i></small>
+                </div>
+                <div id="set-client-password-message" class="form-message" style="margin-top: 10px;"></div>
+            </form>
+        </div>
+
+        <hr style="margin: 30px 0;">
+
+        <div id="locations-management-section" class="form-section" style="display: block;">
+            <h3>Manage All Locations</h3>
+            <div style="margin-bottom: 20px;"> 
+                <button id="show-add-location-form-button-page" class="admin-action-button">Add New Location</button> 
+                </div>
+            <p id="locations-loading-message">Loading locations...</p>
+            <div class="table-wrapper"> 
+                <table id="locations-table" style="width: 100%; border-collapse: collapse; display: none;"> 
+                    <thead> 
+                        <tr style="border-bottom: 1px solid #ccc; text-align: left;"> 
+                            <th style="padding: 8px;">Location ID</th> 
+                            <th style="padding: 8px;">Location Name</th> 
+                            <th style="padding: 8px;">Client Name</th> 
+                            <th style="padding: 8px;">Address</th> 
+                            <th style="padding: 8px;">Status</th> 
+                            <th style="padding: 8px;">Photos</th> 
+                            <th style="padding: 8px;">Actions</th> 
+                        </tr> 
+                    </thead> 
+                    <tbody id="locations-table-body"></tbody> 
+                </table> 
+            </div>
+            <p id="no-locations-message" style="display: none;">No locations found.</p>
+        </div>
+
+        <div id="add-edit-location-form-section" class="form-section" style="display: none; margin-top: 20px;">
+            <h3 id="location-form-title">Add New Location</h3>
+            <form id="add-edit-location-form">
+                <input type="hidden" id="edit-location-doc-id">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="location-client-select">Assign to Client:</label>
+                        <select id="location-client-select" required>
+                            <option value="">-- Loading Clients --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-name">Location Name:</label>
+                        <input type="text" id="location-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-id-string">Location ID String:</label>
+                        <input type="text" id="location-id-string" placeholder="e.g., LOC-1001" required>
+                        <small><i>Enter unique ID for this location.</i></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-address-street">Street:</label>
+                        <input type="text" id="location-address-street" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-address-city">City:</label>
+                        <input type="text" id="location-address-city" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-address-state">State:</label>
+                        <input type="text" id="location-address-state" value="OH" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-address-zip">Zip Code:</label>
+                        <input type="text" id="location-address-zip" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-contact-name">Location Contact Name:</label>
+                        <input type="text" id="location-contact-name">
+                    </div>
+                    <div class="form-group">
+                        <label for="location-contact-phone">Location Contact Phone:</label>
+                        <input type="tel" id="location-contact-phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="location-service-frequency">Service Frequency:</label>
+                        <select id="location-service-frequency">
+                            <option value="">-- Select Frequency --</option>
+                            <option value="One-Time">One-Time</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="CustomWeekly">Custom Days Weekly</option> <option value="Bi-Weekly">Bi-Weekly</option>
+                            <option value="Monthly">Monthly</option>
+                        </select>
+                        <small><i>Select frequency. Choose 'Custom Days Weekly' to select specific days below.</i></small>
+                    </div>
+                    <div id="location-service-days-group" class="form-group" style="display: none; grid-column: 1 / -1; border: 1px solid #ddd; padding: 10px; background-color: #f0f0f0;">
+                        <label>Select Service Days (for Custom Weekly):</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                            <label style="font-weight: normal;"><input type="checkbox" name="serviceDay" value="0"> Sun</label>
+                            <label style="font-weight: normal;"><input type="checkbox" name="serviceDay" value="1"> Mon</label>
+                            <label style="font-weight: normal;"><input type="checkbox" name="serviceDay" value="2"> Tue</label>
+                            <label style="font-weight: normal;"><input type="checkbox" name="serviceDay" value="3"> Wed</label>
+                            <label style="font-weight: normal;"><input type="checkbox" name="serviceDay" value="4"> Thu</label>
+                            <label style="font-weight: normal;"><input type="checkbox" name="serviceDay" value="5"> Fri</label>
+                            <label style="font-weight: normal;"><input type="checkbox" name="serviceDay" value="6"> Sat</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-next-service-date">Next Scheduled Service Date:</label>
+                        <input type="date" id="location-next-service-date">
+                        <label for="edit-location-nextServiceTime">Next Service Time (Optional):</label>
+                        <input type="time" id="edit-location-nextServiceTime">
+                        <small><i>Set initial date for recurring service. Will be auto-updated later.</i></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-last-service-date">Last Service Date:</label>
+                        <input type="date" id="location-last-service-date" readonly>
+                        <small><i>(Read-only: Updated when service is marked complete).</i></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-status">Status:</label>
+                        <select id="location-status" required>
+                            <option value="true" selected>Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="save-location-button" class="save-button">Save Location</button>
+                    <button type="button" class="cancel-button" id="cancel-add-edit-location-form">Cancel</button>
+                </div>
+                <div id="add-edit-location-message" class="form-message"></div>
+            </form>
+        </div>
+        
+        <div id="location-photos-section" class="form-section" style="display: none; margin-top: 20px;">
+            <h3 id="location-photos-title">Photos for Location</h3>
+            <p><em>Sorted newest first</em></p>
+            <div id="location-photos-container" style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px;"> 
+                <p id="photos-loading-message" style="display: none;">Loading photos...</p> 
+            </div>
+            <p id="no-location-photos-message" style="display: none;">No photos found for this location.</p>
+            <div class="form-actions" style="margin-top: 20px;"> 
+                <button type="button" class="cancel-button" id="back-to-locations-from-photos">Back to Locations List</button> 
+            </div>
+        </div>
+
+    </div> <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script> 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+<script>
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyAJEuOcNLg8dYtzhMEyhMZtidfIXNALcgU", // Your actual API key
+        authDomain: "cleveland-clean-portal.firebaseapp.com",
+        projectId: "cleveland-clean-portal",
+        storageBucket: "cleveland-clean-portal.firebasestorage.app", 
+        messagingSenderId: "938625547862",
+        appId: "1:938625547862:web:3655b2b380b858702705f7",
+        measurementId: "G-7KZMMKZ1XW"
+    };
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    } else {
+        firebase.app(); 
+    }
+</script>
+
+<script src="js/admin-clients-locations.js"></script>
+</body>
+</html>

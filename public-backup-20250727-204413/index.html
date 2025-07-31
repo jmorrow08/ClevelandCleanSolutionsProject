@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Login - Cleveland Clean Solutions</title>
+    <link rel="stylesheet" href="css/admin-styles.css"> 
+    <style>
+        /* Basic styles for login page - can be moved to a separate css/login-styles.css if preferred */
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f2f5; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
+        .login-container { background-color: #fff; padding: 30px 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 100%; max-width: 400px; text-align: center; }
+        .login-container h1 { margin-bottom: 10px; color: #333; font-size: 1.8em; }
+        .login-container p { margin-bottom: 25px; color: #666; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; color: #4a4a4a; font-weight: 500; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+        .submit-button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; font-size: 1em; cursor: pointer; transition: background-color 0.3s; }
+        .submit-button:hover { background-color: #0056b3; }
+        .submit-button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #auth-message { margin-top: 20px; padding: 10px; border-radius: 5px; text-align: center; min-height: 1.2em; /* Prevents layout shift */ display: none; /* Hidden by default */ }
+        #auth-message.success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+        #auth-message.error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        #auth-message.info { color: #0c5460; background-color: #d1ecf1; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Portal Login</h1>
+        <p>Cleveland Clean Solutions</p>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" id="loginButton" class="submit-button">Login</button>
+        </form>
+        <div id="auth-message"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJEuOcNLg8dYtzhMEyhMZtidfIXNALcgU",
+            authDomain: "cleveland-clean-portal.firebaseapp.com",
+            projectId: "cleveland-clean-portal",
+            storageBucket: "cleveland-clean-portal.firebasestorage.app", 
+            messagingSenderId: "938625547862",
+            appId: "1:938625547862:web:3655b2b380b858702705f7",
+            measurementId: "G-7KZMMKZ1XW"
+        };
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        } else {
+            firebase.app(); 
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const loginForm = document.getElementById('loginForm');
+        const loginButton = document.getElementById('loginButton');
+        const authMessageDiv = document.getElementById('auth-message');
+
+        function showLoginMessage(message, type = 'error') {
+            if (authMessageDiv) {
+                authMessageDiv.textContent = message;
+                authMessageDiv.className = type; 
+                authMessageDiv.style.display = message ? 'block' : 'none';
+            }
+            if (type === 'error') console.error("Login Message:", message);
+            else console.log("Login Message (" + type + "):", message);
+        }
+
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if(loginButton) loginButton.disabled = true;
+                showLoginMessage('Signing in...', 'info');
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('password');
+                const email = emailInput ? emailInput.value : null;
+                const password = passwordInput ? passwordInput.value : null;
+
+                if (!email || !password) {
+                    showLoginMessage('Email and password are required.', 'error');
+                    if(loginButton) loginButton.disabled = false;
+                    return;
+                }
+
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+                        return db.collection('users').doc(user.uid).get();
+                    })
+                    .then((docSnapshot) => {
+                        if (docSnapshot.exists) {
+                            const userData = docSnapshot.data();
+                            const role = userData.role;
+                            console.log("Login successful, user role from Firestore:", role);
+
+                            // MODIFIED: Check for owner role first, then admin roles
+                            if (role === 'owner') {
+                                // Owners default to employee portal
+                                window.location.assign('/employee');
+                            } else if (role === 'admin' || role === 'super_admin') {
+                                window.location.assign('/admin');
+                            } else if (role === 'employee') {
+                                window.location.assign('/employee');
+                            } else if (role === 'client') {
+                                window.location.assign('/client');
+                            } else {
+                                showLoginMessage('Role not recognized or insufficient permissions. Access denied.', 'error');
+                                auth.signOut();
+                            }
+                        } else {
+                            showLoginMessage('User data not found after login. Please contact support.', 'error');
+                            auth.signOut(); 
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Login error:", error);
+                        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                            showLoginMessage('Invalid email or password.', 'error');
+                        } else if (error.code === 'auth/invalid-email') {
+                            showLoginMessage('Invalid email format.', 'error');
+                        } else {
+                            showLoginMessage('Sign in error. Please check credentials or try again.', 'error');
+                        }
+                    })
+                    .finally(() => {
+                        if(loginButton) loginButton.disabled = false;
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

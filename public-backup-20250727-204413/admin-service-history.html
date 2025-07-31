@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service History - Admin Portal</title>
+    <link rel="stylesheet" href="css/admin-styles.css">
+    <style>
+        /* Service History Table Improvements */
+        .table-container {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            background-color: #007bff !important;
+            color: white !important;
+            border-color: #007bff !important;
+        }
+        
+        .table-controls, .pagination-controls {
+            margin: 15px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .table-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .pagination-controls {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            
+            .pagination-btn {
+                padding: 6px 8px !important;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCm6ln4PSDxYKsrNEFpuYlnjA0B3dJxGLs&callback=initMapAsh"></script>
+    
+    <style>
+        /* Your existing inline styles from the HTML file - it's recommended to move these to admin-styles.css eventually */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f6; color: #333; line-height: 1.6; margin: 0; padding: 0;}
+        .admin-container { max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .admin-main-content h2 { color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .filters-section, .form-section-sh { background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .filters-section h3, .form-section-sh h3 { margin-top: 0; color: #34495e; }
+        .filters-section .form-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+        .filters-section .form-group { flex: 1; min-width: 200px; }
+        .filters-section label, .form-section-sh label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .filters-section input[type="date"], .form-section-sh input[type="date"], .form-section-sh select, .form-section-sh input[type="text"], .form-section-sh textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+        .form-section-sh .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .form-section-sh .form-group.full-width { grid-column: 1 / -1; }
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background-color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-radius: 8px; overflow: hidden; }
+        .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        .data-table th { background-color: #e9ecef; font-weight: 600; color: #495057; }
+        .data-table tbody tr:hover { background-color: #f8f9fa; }
+        .data-table .button-small { padding: 5px 10px; font-size: 0.8em; margin-right: 5px; } /* Adjusted padding */
+        .modal-like-section { position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow-y: auto; background-color: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; }
+        .modal-content { background-color: #ffffff; margin: auto; padding: 25px 30px; border: none; border-radius: 8px; width: 90%; max-width: 800px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; animation: fadeInModal 0.3s ease-out; }
+        @keyframes fadeInModal { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .close-button { color: #666; position: absolute; top: 15px; right: 20px; font-size: 32px; font-weight: bold; line-height: 1; }
+        .close-button:hover, .close-button:focus { color: #000; text-decoration: none; cursor: pointer; }
+        #photos-viewer-title { margin-top: 0; color: #333; font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+                 .photos-grid-container { 
+            display: grid !important; 
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important; 
+            gap: 12px !important; 
+            max-height: 300px !important; 
+            overflow-y: auto !important; 
+            border: 1px solid #ddd !important; 
+            border-radius: 6px !important; 
+            background-color: #fafafa !important; 
+            padding: 12px !important;
+        }
+        .photo-item { 
+            display: flex !important; 
+            flex-direction: column !important; 
+            align-items: center !important; 
+            padding: 10px !important; 
+            border: 1px solid #e0e0e0 !important; 
+            border-radius: 6px !important; 
+            background-color: #fff !important; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            transition: transform 0.2s ease !important;
+        }
+        .photo-item:hover { 
+            transform: translateY(-2px) !important; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+        }
+        .photo-item img { 
+            width: 80px !important; 
+            height: 80px !important; 
+            object-fit: cover !important; 
+            border-radius: 6px !important; 
+            cursor: pointer !important; 
+            margin-bottom: 8px !important;
+            border: 2px solid #f0f0f0 !important;
+        }
+        .photo-item-content { 
+            width: 100% !important; 
+            text-align: center !important;
+        }
+        .photo-item p { 
+            font-size: 0.75em !important; 
+            margin: 2px 0 !important; 
+            color: #666 !important; 
+            line-height: 1.2 !important;
+        }
+        .photo-item label { 
+            font-size: 0.8em !important; 
+            display: flex !important; 
+            align-items: center !important; 
+            justify-content: center !important; 
+            gap: 4px !important; 
+            cursor: pointer !important; 
+            font-weight: 600 !important;
+            color: #28a745 !important;
+            margin-top: 6px !important;
+        }
+        .photo-item input[type="checkbox"] { 
+            margin: 0 !important; 
+            transform: scale(1.2) !important;
+        }
+        .empty-state-message { text-align: center; padding: 20px; color: #777; font-style: italic; }
+        .error-message { color: #d9534f; font-weight: bold; padding: 10px; border: 1px solid #d9534f; border-radius: 4px; background-color: #f2dede; }
+        .button, button { /* Your base button styles from admin-styles.css will apply */ }
+        .form-actions { margin-top: 20px; text-align: right; }
+        .form-actions button { margin-left: 10px; }
+        #sh-photo-review-section h4 { margin-top:0; margin-bottom: 15px; color: #34495e; }
+        .map-canvas { /* Style for map containers */
+            width: 100%; 
+            height: 180px; /* Adjust as needed */
+            background-color: #e9e9e9; /* Placeholder while map loads */
+            margin-top: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+        }
+        .time-entry-item { /* For styling individual time entries */
+            border-bottom: 1px dotted #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .time-entry-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .time-entry-item p { margin: 4px 0; font-size: 0.9em; }
+    </style>
+</head>
+<body class="on-service-history-page">
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>Cleveland Clean Solutions - Admin Portal</h1>
+            <nav>
+                <a href="admin.html">Dashboard</a>
+                <a href="admin-clients-locations.html">Clients & Locations</a>
+                <a href="admin-payroll.html">Payroll</a>
+                <a href="admin-service-history.html" class="active">Service History</a>
+                <a href="admin-employees.html">Employee Management</a>
+                <button id="admin-logout-button">Logout</button>
+            </nav>
+        </header>
+
+        <main id="admin-service-history-content" class="admin-main-content">
+            <h2>Service History Management</h2>
+            <a href="admin.html" class="back-link">&larr; Back to Admin Dashboard</a>
+
+            <button id="show-add-service-history-form-button" class="admin-action-button" style="margin-bottom: 20px; background-color: #28a745;">Add New Service Record</button>
+
+            <div id="add-edit-service-history-section" class="form-section-sh" style="display: none;">
+                <h3 id="service-history-form-title">Add New Service Record</h3>
+                <form id="add-edit-service-history-form">
+                    <input type="hidden" id="edit-service-history-doc-id">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="sh-client-select">Client:</label>
+                            <select id="sh-client-select" required><option value="">-- Loading Clients --</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sh-location-select">Location:</label>
+                            <select id="sh-location-select" required disabled><option value="">-- Select Client First --</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sh-service-date">Service Date:</label>
+                            <input type="date" id="sh-service-date" required>
+                        </div>
+                        <div class="form-group full-width"> 
+                            <label>Employees Assigned:</label>
+                            <div id="sh-employee-checkbox-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #eee; padding: 10px; background-color: #fff;">
+                                <p><i>Loading employees...</i></p>
+                            </div>
+                            <small><i>Check all employees who performed this service.</i></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="sh-service-type">Service Type:</label>
+                            <input type="text" id="sh-service-type" placeholder="e.g., Weekly Cleaning">
+                        </div>
+                        <div class="form-group">
+                            <label for="sh-status">Status:</label>
+                            <select id="sh-status" required>
+                                <option value="Scheduled">Scheduled</option>
+                                <option value="Completed">Completed</option> 
+                                <option value="Missed">Missed</option>
+                                <option value="Cancelled">Cancelled</option>
+                                </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="sh-service-notes">Original Service Notes (Employee/Initial):</label>
+                            <textarea id="sh-service-notes" rows="3" placeholder="Notes from employee or initial service details..."></textarea>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="sh-admin-notes">Admin Notes (May be visible to client):</label>
+                            <textarea id="sh-admin-notes" rows="4" placeholder="Add any notes for the client or internal remarks for review..."></textarea>
+                        </div>
+
+                        <div class="form-group full-width" id="sh-photo-review-section">
+                            <h4>Review Service Photos for Client Portal</h4>
+                            <div style="margin-bottom: 10px;">
+                                <button type="button" id="sh-approve-all-photos-btn" class="button-small action-button" style="background-color: #28a745;">Approve All</button>
+                                <button type="button" id="sh-hide-all-photos-btn" class="button-small cancel-button" style="background-color: #ffc107; color:black;">Hide All</button>
+                                <p><small>Check photos you want to be visible to the client. Unchecked photos will not be shown on the client portal.</small></p>
+                            </div>
+                            <div id="sh-photo-review-gallery-loading" style="display: none; text-align:center; padding: 10px;">Loading photos for review...</div>
+                            <div id="sh-photo-review-gallery" class="photos-grid-container">
+                                <p id="sh-no-photos-for-review" style="display: block; text-align:center; width:100%;">No photos uploaded for this service or photos are still loading.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group full-width" id="sh-time-tracking-display-section" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                            <h4>Employee Activity &amp; Clock-in/Out Locations</h4>
+                            <div id="sh-time-tracking-loading" style="display: none; padding: 10px; font-style: italic;">Loading time tracking data...</div>
+                            <div id="sh-time-tracking-list" style="max-height: 400px; overflow-y: auto;">
+                                <p id="sh-no-time-tracking" style="display: none; font-style: italic;">No clock-in/out data found for this service's location and date.</p>
+                            </div>
+                        </div>
+                        </div> <div class="form-actions">
+                        <button type="submit" id="save-service-history-button" class="save-button">Save / Update Record</button>
+                        <button type="button" id="cancel-add-edit-service-history-button" class="cancel-button">Cancel</button>
+                    </div>
+                    <div id="add-edit-service-history-message" class="form-message"></div>
+                </form>
+            </div>
+
+            <div id="service-history-list-view">
+                <div class="filters-section form-section">
+                    <h3>Filter Service History</h3>
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr auto auto; gap: 15px; align-items: end;">
+                        <div class="form-group">
+                            <label for="filter-date-start">Start Date (Optional):</label>
+                            <input type="date" id="filter-date-start" placeholder="No start date limit">
+                        </div>
+                        <div class="form-group">
+                            <label for="filter-date-end">End Date (Optional):</label>
+                            <input type="date" id="filter-date-end" placeholder="No end date limit">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="apply-filters-button" class="admin-action-button" style="padding: 8px 16px;">Apply Filters</button>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="reset-filters-button" class="cancel-button" style="padding: 8px 16px; font-weight: bold; background-color: #28a745; color: white;">Show All Records</button>
+                        </div>
+                    </div>
+                    <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #666;">
+                        <strong>Tip:</strong> Leave both dates blank to view the complete service history, or set a date range to filter records.
+                    </p>
+                </div>
+                
+                <!-- Table Controls -->
+                <div class="table-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div class="page-size-controls">
+                        <label for="records-per-page">Records per page:</label>
+                        <select id="records-per-page" style="margin-left: 5px; padding: 5px;">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div id="table-info" class="table-info">
+                        <!-- Shows current range and total -->
+                    </div>
+                </div>
+
+                <div id="service-history-loading-message" style="display: none; text-align: center; padding: 20px;">Loading service history... Please wait.</div>
+                <div id="no-service-history-message" class="empty-state-message" style="display: none;">No service history records found for the selected criteria.</div>
+                
+                <!-- Table Container with Scroll -->
+                <div class="table-container" style="overflow-x: auto; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                    <table id="service-history-table" class="data-table" style="margin: 0; min-width: 1200px;">
+                        <thead>
+                            <tr>
+                                <th style="min-width: 100px;">Service Date</th>
+                                <th style="min-width: 150px;">Location</th>
+                                <th style="min-width: 120px;">Client</th>
+                                <th style="min-width: 150px;">Assigned Employees</th>
+                                <th style="min-width: 120px;">Service Type</th>
+                                <th style="min-width: 80px;">Status</th>
+                                <th style="min-width: 150px;">Notes</th>
+                                <th style="min-width: 180px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="service-history-table-body">
+                            </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Controls -->
+                <div class="pagination-controls" style="display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <button id="first-page-btn" class="pagination-btn" style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer; border-radius: 4px; transition: all 0.2s;">First</button>
+                    <button id="prev-page-btn" class="pagination-btn" style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer; border-radius: 4px; transition: all 0.2s;">Previous</button>
+                    <span id="page-info" style="padding: 0 15px; font-weight: 500;">Page 1 of 1</span>
+                    <button id="next-page-btn" class="pagination-btn" style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer; border-radius: 4px; transition: all 0.2s;">Next</button>
+                    <button id="last-page-btn" class="pagination-btn" style="padding: 8px 12px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer; border-radius: 4px; transition: all 0.2s;">Last</button>
+                </div>
+            </div> 
+            
+            <div id="service-photos-viewer-section" class="modal-like-section" style="display: none;">
+                <div class="modal-content">
+                    <span id="close-photos-viewer-button" class="close-button">&times;</span>
+                    <h3 id="photos-viewer-title">Service Photos</h3>
+                    
+                    <div id="photos-viewer-loading-message" class="empty-state-message" style="display: none;">
+                        Loading photos...
+                    </div>
+                    <div id="no-service-photos-message" class="empty-state-message" style="display: none;">
+                        No photos found for this service entry.
+                    </div>
+                    
+                    <div id="photos-viewer-container" class="photos-grid-container">
+                        {/* Photos will be dynamically loaded here by JavaScript */}
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="admin-footer">
+            <p>&copy; <span id="current-year"></span> Cleveland Clean Solutions. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/admin-service-history.js"></script>
+    <script>
+        // Your existing inline script for year and logout
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        const adminLogoutButton = document.getElementById('admin-logout-button');
+        if (adminLogoutButton && typeof firebase !== 'undefined' && firebase.auth) {
+            adminLogoutButton.addEventListener('click', () => {
+                firebase.auth().signOut().then(() => {
+                    console.log('User signed out successfully from Service History page.');
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error('Logout Error (Service History Page):', error);
+                    alert('Error signing out. Please try again.');
+                });
+            });
+        }
+    </script>
+</body>
+</html>

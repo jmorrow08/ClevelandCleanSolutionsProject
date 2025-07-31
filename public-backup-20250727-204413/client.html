@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Portal - Cleveland Clean Solutions</title>
+    <link rel="stylesheet" href="css/tailwind.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons for modern interface -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- Firebase SDK v8 (Compatible with existing config) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    
+    <style>
+         .action-card {
+             @apply flex flex-col items-center p-4 rounded-lg border border-border hover:shadow-md transition-all bg-white hover:bg-gray-50;
+         }
+         .view-section {
+             @apply space-y-6;
+         }
+         .nav-item.active {
+             @apply bg-primary text-primary-foreground;
+         }
+         .nav-item:not(.active):hover {
+             @apply bg-secondary;
+         }
+         .service-progress {
+             @apply w-full bg-gray-200 rounded-full h-2;
+         }
+         .service-progress-bar {
+             @apply bg-primary h-2 rounded-full transition-all;
+         }
+         
+         /* Mobile-friendly sidebar styles */
+         .sidebar {
+             transition: transform 0.3s ease;
+         }
+         
+         /* Mobile overlay */
+         .sidebar-overlay {
+             position: fixed;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             background-color: rgba(0, 0, 0, 0.5);
+             z-index: 40;
+             display: none;
+         }
+         
+         /* Mobile responsive */
+         @media (max-width: 768px) {
+             .sidebar {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 height: 100vh;
+                 transform: translateX(-100%);
+                 z-index: 50;
+             }
+             
+             .sidebar-open {
+                 transform: translateX(0);
+             }
+             
+             .main-content {
+                 margin-left: 0 !important;
+                 width: 100%;
+             }
+             
+             .sidebar-overlay.active {
+                 display: block;
+             }
+             
+             .mobile-menu-button {
+                 display: block;
+             }
+         }
+         
+         /* Desktop */
+         @media (min-width: 769px) {
+             .mobile-menu-button {
+                 display: none;
+             }
+         }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 font-sans">
+    <!-- Loading State -->
+    <div id="client-loading-message" class="flex items-center justify-center min-h-screen">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p class="text-lg text-muted-foreground">Loading Client Portal...</p>
+        </div>
+    </div>
+
+    <!-- Main Client Dashboard -->
+    <div id="client-dashboard-content" class="min-h-screen bg-background" style="display: none;">
+        <!-- Mobile overlay -->
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+        
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-button" class="mobile-menu-button fixed top-4 right-4 z-60 p-4 bg-white rounded-lg shadow-lg border border-border md:hidden">
+            <i data-lucide="menu" class="h-7 w-7"></i>
+        </button>
+        
+        <div class="flex">
+            <!-- Sidebar -->
+            <div id="sidebar" class="sidebar w-64 bg-white shadow-lg border-r border-border">
+                <div class="p-6">
+                    <h1 class="text-xl font-bold text-foreground">Client Portal</h1>
+                    <p class="text-sm text-muted-foreground" id="client-name-sidebar">Loading...</p>
+                </div>
+                <nav class="px-4 space-y-2">
+                    <button id="nav-dashboard" class="nav-item active w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors bg-primary text-primary-foreground">
+                        <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                        Dashboard
+                    </button>
+                    <button id="nav-services" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="settings" class="h-5 w-5"></i>
+                        Services
+                    </button>
+                    <button id="nav-invoices" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="receipt" class="h-5 w-5"></i>
+                        Invoices
+                    </button>
+                    <button id="nav-photos" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="camera" class="h-5 w-5"></i>
+                        Job Photos
+                    </button>
+                    <button id="nav-profile" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors text-muted-foreground hover:bg-secondary">
+                        <i data-lucide="user" class="h-5 w-5"></i>
+                        Profile
+                    </button>
+                </nav>
+                <div class="absolute bottom-4 left-4 right-4">
+                    <a href="admin.html" id="go-to-admin-portal-link" class="btn-secondary w-full mb-2 hidden">
+                        <i data-lucide="settings" class="h-4 w-4 mr-2"></i>
+                        Admin View
+                    </a>
+                    <button id="logout-button" class="btn-destructive w-full">
+                        <i data-lucide="log-out" class="h-4 w-4 mr-2"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content flex-1 p-8 md:ml-0">
+                <!-- Dashboard View -->
+                <div id="view-dashboard" class="view-section">
+                    <div class="mb-6 mt-4 md:mt-0">
+                        <h1 id="welcome-message" class="text-3xl font-bold text-foreground">Welcome, Client!</h1>
+                        <p class="text-muted-foreground">Your cleaning service dashboard</p>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="card">
+                            <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium">Next Service</h3>
+                                <i data-lucide="calendar" class="h-4 w-4 text-muted-foreground"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-2xl font-bold" id="dashboard-next-service">Loading...</div>
+                                <p class="text-xs text-muted-foreground" id="dashboard-next-service-employee">-</p>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium">Outstanding Balance</h3>
+                                <i data-lucide="dollar-sign" class="h-4 w-4 text-muted-foreground"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-2xl font-bold" id="dashboard-balance">$0.00</div>
+                                <p class="text-xs text-muted-foreground" id="dashboard-pending-invoices">0 pending invoices</p>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium">Service Type</h3>
+                                <i data-lucide="activity" class="h-4 w-4 text-muted-foreground"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-lg font-medium" id="dashboard-service-type">Loading...</div>
+                                <p class="text-xs text-muted-foreground">Current contract</p>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 class="text-sm font-medium">Jobs Completed</h3>
+                                <i data-lucide="check-circle" class="h-4 w-4 text-muted-foreground"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="text-2xl font-bold" id="dashboard-jobs-completed">0</div>
+                                <p class="text-xs text-muted-foreground">This month</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Recent Cleaning Services</h2>
+                            </div>
+                            <div class="card-content">
+                                <div id="recent-services-loading" class="flex items-center justify-center py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                    <span class="text-muted-foreground">Loading recent services...</span>
+                                </div>
+                                <div id="recent-services-container" class="space-y-4 hidden">
+                                    <!-- Recent services will be loaded here -->
+                                </div>
+                                <div id="no-recent-services" class="text-center py-8 hidden">
+                                    <i data-lucide="calendar-x" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
+                                    <p class="text-muted-foreground">No recent services</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Payment Status</h2>
+                            </div>
+                            <div class="card-content">
+                                <div id="payment-status-loading" class="flex items-center justify-center py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                    <span class="text-muted-foreground">Loading payment status...</span>
+                                </div>
+                                <div id="payment-status-container" class="space-y-4 hidden">
+                                    <!-- Payment status will be loaded here -->
+                                </div>
+                                <div id="all-paid-message" class="text-center py-8 hidden">
+                                    <div class="text-green-600 flex items-center justify-center gap-2">
+                                        <i data-lucide="check-circle" class="h-5 w-5"></i>
+                                        All invoices paid ✓
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Services View -->
+                <div id="view-services" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Services</h1>
+                        <p class="text-muted-foreground">Your cleaning service details and schedule</p>
+                    </div>
+
+                    <!-- Service Agreement -->
+                    <div class="card mb-6">
+                        <div class="card-header">
+                            <h2 class="card-title">Service Agreement</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 class="font-semibold mb-2">Contract Details</h3>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex justify-between">
+                                            <span class="text-muted-foreground">Service Type:</span>
+                                            <span id="contract-service-type">Loading...</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-muted-foreground">Location:</span>
+                                            <span id="contract-location">Loading...</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-muted-foreground">Next Service:</span>
+                                            <span id="contract-next-service">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold mb-2">Service Includes</h3>
+                                    <ul class="space-y-1 text-sm text-muted-foreground">
+                                        <li class="flex items-center gap-2">
+                                            <i data-lucide="check-circle" class="h-3 w-3 text-green-600"></i>
+                                            Vacuum all carpeted areas
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <i data-lucide="check-circle" class="h-3 w-3 text-green-600"></i>
+                                            Empty all trash receptacles
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <i data-lucide="check-circle" class="h-3 w-3 text-green-600"></i>
+                                            Clean and disinfect restrooms
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <i data-lucide="check-circle" class="h-3 w-3 text-green-600"></i>
+                                            Wipe down all surfaces
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <i data-lucide="check-circle" class="h-3 w-3 text-green-600"></i>
+                                            Mop hard floor surfaces
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current/Upcoming Services -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">In Progress</h2>
+                            </div>
+                            <div class="card-content">
+                                <div id="in-progress-loading" class="flex items-center justify-center py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                    <span class="text-muted-foreground">Loading services...</span>
+                                </div>
+                                <div id="in-progress-container" class="space-y-4 hidden">
+                                    <!-- In progress services will be loaded here -->
+                                </div>
+                                <div id="no-in-progress" class="text-center py-8 hidden">
+                                    <p class="text-muted-foreground">No services currently in progress</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Upcoming Services</h2>
+                            </div>
+                            <div class="card-content">
+                                <div id="upcoming-loading" class="flex items-center justify-center py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                    <span class="text-muted-foreground">Loading services...</span>
+                                </div>
+                                <div id="upcoming-container" class="space-y-4 hidden">
+                                    <!-- Upcoming services will be loaded here -->
+                                </div>
+                                <div id="no-upcoming" class="text-center py-8 hidden">
+                                    <p class="text-muted-foreground">No upcoming services scheduled</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service History -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Complete Service History</h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="service-history-loading" class="flex items-center justify-center py-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                <span class="text-muted-foreground">Loading service history...</span>
+                            </div>
+                            <div id="service-history-container" class="space-y-3 hidden">
+                                <!-- Service history will be loaded here -->
+                            </div>
+                            <div id="no-service-history" class="text-center py-8 hidden">
+                                <i data-lucide="calendar-x" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
+                                <p class="text-muted-foreground">No service history available yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Invoices View -->
+                <div id="view-invoices" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Invoices</h1>
+                        <p class="text-muted-foreground">Manage your billing and payments</p>
+                    </div>
+
+                    <!-- Outstanding Balance Card -->
+                    <div id="outstanding-balance-card" class="card border-l-4 border-l-orange-500 mb-6 hidden">
+                        <div class="card-header">
+                            <h2 class="card-title flex items-center gap-2">
+                                <i data-lucide="credit-card" class="h-5 w-5"></i>
+                                Outstanding Balance
+                            </h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-2xl font-bold text-orange-600" id="total-outstanding">$0.00</div>
+                                    <p class="text-sm text-muted-foreground" id="unpaid-invoices-count">0 unpaid invoice(s)</p>
+                                </div>
+                                <button class="btn-primary btn-lg">
+                                    <i data-lucide="credit-card" class="h-4 w-4 mr-2"></i>
+                                    Pay Now <span class="text-xs">(Coming Soon)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Invoices Coming Soon -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Invoices & Billing</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="text-center py-12">
+                                <div class="mb-6">
+                                    <i data-lucide="construction" class="h-16 w-16 text-muted-foreground mx-auto mb-4"></i>
+                                    <h3 class="text-2xl font-semibold text-foreground mb-2">Coming Soon</h3>
+                                    <p class="text-muted-foreground max-w-md mx-auto">
+                                        We're working on integrating invoice management with our admin portal. 
+                                        This feature will be available soon and will allow you to view, download, 
+                                        and pay invoices directly from your client portal.
+                                    </p>
+                                </div>
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                                    <div class="flex items-center gap-2 text-blue-800">
+                                        <i data-lucide="info" class="h-4 w-4"></i>
+                                        <span class="text-sm font-medium">In the meantime</span>
+                                    </div>
+                                    <p class="text-sm text-blue-700 mt-1">
+                                        Please contact us directly for any billing inquiries or payment processing.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Service Details & Photos View -->
+                <div id="view-photos" class="view-section hidden">
+                    <!-- Service Selection View -->
+                    <div id="service-selection-view">
+                        <div class="mb-6">
+                            <h1 class="text-3xl font-bold text-foreground">Service Details & Photos</h1>
+                            <p class="text-muted-foreground">Select a service date to view photos and notes from our team</p>
+                        </div>
+
+                        <!-- Service Date Selection -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Select Service Date</h2>
+                            </div>
+                            <div class="card-content">
+                                <div id="service-dates-loading" class="flex items-center justify-center py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                    <span class="text-muted-foreground">Loading service dates...</span>
+                                </div>
+                                <div id="service-dates-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                                    <!-- Service date cards will be loaded here -->
+                                </div>
+                                <div id="no-service-dates" class="text-center py-8 hidden">
+                                    <i data-lucide="calendar-x" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
+                                    <p class="text-muted-foreground">No completed services available yet</p>
+                                    <p class="text-sm text-muted-foreground mt-2">Service details and photos will appear here after our team completes services</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service Detail View -->
+                    <div id="service-detail-view" class="hidden">
+                        <div class="mb-6">
+                            <div class="flex items-center gap-4">
+                                <button id="back-to-service-list" class="btn-outline">
+                                    <i data-lucide="arrow-left" class="h-4 w-4 mr-2"></i>
+                                    Back to Service List
+                                </button>
+                                <div>
+                                    <h1 class="text-3xl font-bold text-foreground" id="service-detail-title">Service Details</h1>
+                                    <p class="text-muted-foreground" id="service-detail-subtitle">Photos and notes from your cleaning service</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Service Information -->
+                        <div class="card mb-6">
+                            <div class="card-header">
+                                <h2 class="card-title">Service Information</h2>
+                            </div>
+                            <div class="card-content">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <div class="space-y-3">
+                                            <div class="flex justify-between">
+                                                <span class="text-muted-foreground">Service Date:</span>
+                                                <span id="detail-service-date" class="font-medium">-</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-muted-foreground">Employee:</span>
+                                                <span id="detail-employee-name" class="font-medium">-</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-muted-foreground">Start Time:</span>
+                                                <span id="detail-start-time" class="font-medium">-</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-muted-foreground">Duration:</span>
+                                                <span id="detail-duration" class="font-medium">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="space-y-3">
+                                            <div class="flex justify-between">
+                                                <span class="text-muted-foreground">Tasks Completed:</span>
+                                                <span id="detail-tasks-completed" class="font-medium">-</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-muted-foreground">Photos Taken:</span>
+                                                <span id="detail-photos-count" class="font-medium">-</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-muted-foreground">Status:</span>
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    Completed
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Admin Notes -->
+                        <div id="admin-notes-card" class="card mb-6 hidden">
+                            <div class="card-header">
+                                <h2 class="card-title flex items-center gap-2">
+                                    <i data-lucide="message-square" class="h-5 w-5"></i>
+                                    Notes from Our Team
+                                </h2>
+                            </div>
+                            <div class="card-content">
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div id="admin-notes-content" class="text-sm text-blue-800">
+                                        <!-- Admin notes will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Service Photos -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title flex items-center gap-2">
+                                    <i data-lucide="camera" class="h-5 w-5"></i>
+                                    Service Photos
+                                </h2>
+                            </div>
+                            <div class="card-content">
+                                <div id="service-photos-loading" class="flex items-center justify-center py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                    <span class="text-muted-foreground">Loading service photos...</span>
+                                </div>
+                                <div id="service-photos-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 hidden">
+                                    <!-- Service photos will be loaded here -->
+                                </div>
+                                <div id="no-service-photos" class="text-center py-8 hidden">
+                                    <i data-lucide="camera-off" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
+                                    <p class="text-muted-foreground">No photos taken for this service</p>
+                                    <p class="text-sm text-muted-foreground mt-2">Our team didn't capture any photos during this service</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile View -->
+                <div id="view-profile" class="view-section hidden">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-foreground">Profile</h1>
+                        <p class="text-muted-foreground">Manage your account information</p>
+                    </div>
+
+                    <!-- Profile Information -->
+                    <div class="card mb-6">
+                        <div class="card-header">
+                            <h2 class="card-title">My Profile</h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="profile-view" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="text-sm font-medium text-muted-foreground">Company Name:</label>
+                                        <div class="text-base" id="display-company">Loading...</div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-sm font-medium text-muted-foreground">Contact Name:</label>
+                                        <div class="text-base" id="display-name">Loading...</div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-sm font-medium text-muted-foreground">Phone Number:</label>
+                                        <div class="text-base" id="display-phone">Loading...</div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-sm font-medium text-muted-foreground">Email Address:</label>
+                                        <div class="text-base" id="display-email">Loading...</div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3 pt-4">
+                                    <button id="show-edit-btn" class="btn-primary">
+                                        <i data-lucide="edit" class="h-4 w-4 mr-2"></i>
+                                        Edit Profile
+                                    </button>
+                                    <button id="show-password-btn" class="btn-secondary">
+                                        <i data-lucide="key" class="h-4 w-4 mr-2"></i>
+                                        Change Password
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Edit Profile Form -->
+                            <div id="profile-edit" class="space-y-4 hidden">
+                                <h3 class="text-lg font-semibold">Edit Profile Details</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="edit-name-input" class="block text-sm font-medium mb-2">Contact Name:</label>
+                                        <input type="text" id="edit-name-input" class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                    </div>
+                                    <div>
+                                        <label for="edit-phone-input" class="block text-sm font-medium mb-2">Phone Number:</label>
+                                        <input type="tel" id="edit-phone-input" class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                    </div>
+                                </div>
+                                <p class="text-sm text-muted-foreground italic">Company Name & Email cannot be changed here.</p>
+                                <div class="flex gap-3">
+                                    <button id="save-profile-btn" class="btn-primary">
+                                        <i data-lucide="save" class="h-4 w-4 mr-2"></i>
+                                        Save Changes
+                                    </button>
+                                    <button id="cancel-edit-btn" class="btn-secondary">Cancel</button>
+                                </div>
+                                <div id="edit-profile-msg" class="text-sm hidden"></div>
+                            </div>
+
+                            <!-- Change Password Form -->
+                            <div id="password-edit" class="space-y-4 hidden">
+                                <h3 class="text-lg font-semibold">Change Your Password</h3>
+                                <p class="text-sm text-muted-foreground italic">Requires your current password for verification.</p>
+                                <form id="change-password-form" class="space-y-4">
+                                    <div>
+                                        <label for="current-password-input" class="block text-sm font-medium mb-2">Current Password:</label>
+                                        <input type="password" id="current-password-input" required class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                    </div>
+                                    <div>
+                                        <label for="new-password-input" class="block text-sm font-medium mb-2">New Password (min. 6 chars):</label>
+                                        <input type="password" id="new-password-input" required minlength="6" class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                    </div>
+                                    <div>
+                                        <label for="confirm-password-input" class="block text-sm font-medium mb-2">Confirm New Password:</label>
+                                        <input type="password" id="confirm-password-input" required minlength="6" class="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring">
+                                    </div>
+                                    <div class="flex gap-3">
+                                        <button type="submit" class="btn-primary">
+                                            <i data-lucide="key" class="h-4 w-4 mr-2"></i>
+                                            Update Password
+                                        </button>
+                                        <button type="button" id="cancel-password-btn" class="btn-secondary">Cancel</button>
+                                    </div>
+                                </form>
+                                <div id="change-password-msg" class="text-sm hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Locations -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">My Active Locations</h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="locations-loading" class="flex items-center justify-center py-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                                <span class="text-muted-foreground">Loading locations...</span>
+                            </div>
+                            <div id="locations-list" class="space-y-3 hidden">
+                                <!-- Locations will be loaded here -->
+                            </div>
+                            <div id="no-locations" class="text-center py-8 hidden">
+                                <i data-lucide="map-pin-off" class="h-12 w-12 text-muted-foreground mx-auto mb-3"></i>
+                                <p class="text-muted-foreground">No active locations found</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="js/firebase-config.js"></script> 
+<script src="js/client-portal.js"></script>
+
+<script>
+// Initialize Lucide icons when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+
+</body>
+</html> 
