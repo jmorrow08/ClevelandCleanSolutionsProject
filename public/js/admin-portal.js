@@ -1997,71 +1997,66 @@ function showJobsByStatus(status) {
 
 // Load and display jobs by status
 async function loadJobsByStatus(status, container) {
-  try {
-    if (!db) {
-      throw new Error("Database not ready");
-    }
+  if (!db) throw new Error("Database not ready");
 
-    let query = db.collection("serviceHistory");
+  let query = db.collection("serviceHistory");
 
-    // Adjust query based on status
-    if (status === "In Progress") {
-      query = query
-        .where("status", "in", ["In Progress", "Scheduled"])
-        .where("serviceDate", "<=", firebase.firestore.Timestamp.now());
-    } else {
-      query = query.where("status", "==", status);
-    }
-
-    const snapshot = await query.limit(50).get();
-
-    if (snapshot.empty) {
-      container.innerHTML = `<p class="text-center text-gray-500 py-8">No ${status.toLowerCase()} jobs found.</p>`;
-      return;
-    }
-
-    let html = '<div class="space-y-4">';
-
-    snapshot.forEach((doc) => {
-      const job = doc.data();
-      const serviceDate = job.serviceDate
-        ? job.serviceDate.toDate().toLocaleDateString()
-        : "Date N/A";
-      const serviceTime = job.serviceDate
-        ? job.serviceDate.toDate().toLocaleTimeString()
-        : "Time N/A";
-
-      html += `
-  <div class="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-       onclick="window.location.href='admin-service-history.html#${doc.id}'">
-    <div class="flex justify-between items-start">
-      <div class="flex-1">
-        <h4 class="font-medium">${escapeHtml(
-          job.clientName || "Unknown Client"
-        )}</h4>
-        <p class="text-sm text-gray-600">${escapeHtml(
-          job.locationName || "Unknown Location"
-        )}</p>
-        <p class="text-sm text-gray-500">${serviceDate} at ${serviceTime}</p>
-        ${
-          job.adminNotes
-            ? `<p class="text-sm text-blue-600 mt-1">Notes: ${escapeHtml(
-                job.adminNotes
-              )}</p>`
-            : ""
-        }
-      </div>
-    </div>
-  </div>
-`;
-    });
-
-    html += "</div>";
-    container.innerHTML = html;
-  } catch (error) {
-    console.error("Error loading jobs by status:", error);
-    container.innerHTML = `<p class="text-center text-red-500 py-8">Error loading jobs: ${error.message}</p>`;
+  // Custom query: include both Scheduled and In Progress for 'In Progress' view
+  if (status === "In Progress") {
+    query = query
+      .where("status", "in", ["In Progress", "Scheduled"])
+      .where("serviceDate", "<=", firebase.firestore.Timestamp.now());
+  } else {
+    query = query.where("status", "==", status);
   }
+
+  // Remove orderBy to avoid missing-index error
+  const snapshot = await query.limit(50).get();
+
+  if (snapshot.empty) {
+    container.innerHTML = `<p class="text-center text-gray-500 py-8">No ${status.toLowerCase()} jobs found.</p>`;
+    return;
+  }
+
+  let html = '<div class="space-y-4">';
+  snapshot.forEach((doc) => {
+    const job = doc.data();
+    const serviceDate = job.serviceDate
+      ? job.serviceDate.toDate().toLocaleDateString()
+      : "Date N/A";
+    const serviceTime = job.serviceDate
+      ? job.serviceDate.toDate().toLocaleTimeString()
+      : "Time N/A";
+
+    // Each row is now clickable – navigates to service history with anchor
+    html += `
+      <div class="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+           onclick="window.location.href='admin-service-history.html#${
+             doc.id
+           }'">
+        <div class="flex justify-between items-start">
+          <div class="flex-1">
+            <h4 class="font-medium">${escapeHtml(
+              job.clientName || "Unknown Client"
+            )}</h4>
+            <p class="text-sm text-gray-600">${escapeHtml(
+              job.locationName || "Unknown Location"
+            )}</p>
+            <p class="text-sm text-gray-500">${serviceDate} at ${serviceTime}</p>
+            ${
+              job.adminNotes
+                ? `<p class="text-sm text-blue-600 mt-1">Notes: ${escapeHtml(
+                    job.adminNotes
+                  )}</p>`
+                : ""
+            }
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  html += "</div>";
+  container.innerHTML = html;
 }
 
 // Update job status
@@ -2138,10 +2133,15 @@ async function approveJobPhotos(jobId) {
 
     if (photoCount > 0) {
       await batch.commit();
-      showNotification(
-        `${photoCount} photos approved for client viewing`,
-        "success"
-      );
+
+      // After approving photos, mark job as completed and not yet processed for payroll
+      await db.collection("serviceHistory").doc(jobId).update({
+        status: "Completed",
+        payrollProcessed: false,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      showNotification("Job approved and marked Completed.", "success");
     } else {
       showNotification("No photos found for this job date", "info");
     }
