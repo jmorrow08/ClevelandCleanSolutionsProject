@@ -934,88 +934,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Load payroll status
-  async function loadPayrollStatus() {
-    if (!db) return;
-
-    try {
-      // Try to estimate payroll from completed services (fallback approach)
-      const today = new Date();
-      const thirtyDaysAgo = new Date(
-        today.getTime() - 30 * 24 * 60 * 60 * 1000
-      );
-
-      // Get completed services in the last 30 days to estimate pending payroll
-      const completedServicesSnapshot = await db
-        .collection("serviceHistory")
-        .where("status", "==", "Complete")
-        .where(
-          "serviceDate",
-          ">=",
-          firebase.firestore.Timestamp.fromDate(thirtyDaysAgo)
-        )
-        .get();
-
-      let estimatedPendingAmount = 0;
-      let completedJobs = 0;
-
-      completedServicesSnapshot.forEach((doc) => {
-        const data = doc.data();
-        // Estimate $50 per completed service (adjust as needed)
-        estimatedPendingAmount += 50;
-        completedJobs++;
-      });
-
-      // Try to get actual payroll records, but handle permission errors
-      let actualPendingAmount = estimatedPendingAmount;
-      let processedCount = 0;
-      let statusMessage = `Estimated based on ${completedJobs} completed jobs`;
-
-      try {
-        const payrollSnapshot = await db
-          .collection("payrollRecords")
-          .where("status", "==", "Pending")
-          .get();
-
-        actualPendingAmount = 0;
-        payrollSnapshot.forEach((doc) => {
-          const data = doc.data();
-          actualPendingAmount += data.totalAmount || 0;
-        });
-
-        const processedSnapshot = await db
-          .collection("payrollRecords")
-          .where("status", "==", "Paid")
-          .get();
-
-        processedCount = processedSnapshot.size;
-        statusMessage = `${
-          payrollSnapshot.size
-        } pending records • Last updated: ${new Date().toLocaleTimeString()}`;
-      } catch (payrollError) {
-        // Silent handling - this is expected for users without payroll access
-        statusMessage = `Estimated: ${completedJobs} jobs completed • Limited access mode`;
-        pendingCount = 0;
-        processedCount = 0;
-      }
-
-      // Update the display
-      document.getElementById(
-        "pending-payroll-amount"
-      ).textContent = `$${actualPendingAmount.toFixed(2)}`;
-      document.getElementById("processed-payroll-count").textContent =
-        processedCount;
-      document.getElementById("payroll-status-message").textContent =
-        statusMessage;
-    } catch (error) {
-      console.error("Error loading payroll status:", error);
-      document.getElementById("payroll-status-message").textContent =
-        "Unable to load payroll status";
-      document.getElementById("pending-payroll-amount").textContent = "$0.00";
-      document.getElementById("processed-payroll-count").textContent = "0";
-    }
-  }
-
   // Load employee activity and clock-in/out data
   async function loadEmployeeActivity() {
     const timeTrackingDisplay = document.getElementById(
@@ -1996,6 +1914,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Initialize Quick Add Panel
                 initializeQuickAddPanel();
 
+                // Attach interactive feature listeners (including modal close buttons)
+                attachInteractiveFeatureListeners();
+
                 // Set default mode to service and populate dropdowns
                 const qasModeSelect = document.getElementById("qas-mode");
                 if (qasModeSelect) {
@@ -2004,6 +1925,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
                   // Populate client dropdown immediately for "Add New Job" mode
                   populateQASClientDropdown();
+                }
+
+                // Attach click handlers for Process Payroll buttons
+                const dashboardBtn = document.getElementById(
+                  "dashboard-process-payroll-button"
+                );
+                if (dashboardBtn) {
+                  dashboardBtn.addEventListener(
+                    "click",
+                    triggerPayrollProcessing
+                  );
+                }
+                const payrollPageBtn = document.getElementById(
+                  "process-payroll-button"
+                );
+                if (payrollPageBtn) {
+                  payrollPageBtn.addEventListener(
+                    "click",
+                    triggerPayrollProcessing
+                  );
                 }
               } catch (error) {
                 console.error("DEBUG AP: Error loading dashboard data:", error);
@@ -2041,7 +1982,7 @@ function showJobsByStatus(status) {
 
   if (!modal || !title || !content) return;
 
-  title.textContent = `Manage ${status} Jobs`;
+  title.textContent = `${status} Jobs`;
   content.innerHTML = `
         <div class="text-center py-8">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -2072,7 +2013,7 @@ async function loadJobsByStatus(status, container) {
       query = query.where("status", "==", status);
     }
 
-    const snapshot = await query.orderBy("serviceDate", "desc").limit(50).get();
+    const snapshot = await query.limit(50).get();
 
     if (snapshot.empty) {
       container.innerHTML = `<p class="text-center text-gray-500 py-8">No ${status.toLowerCase()} jobs found.</p>`;
@@ -2091,52 +2032,28 @@ async function loadJobsByStatus(status, container) {
         : "Time N/A";
 
       html += `
-                <div class="border rounded-lg p-4 bg-gray-50">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h4 class="font-medium">${escapeHtml(
-                              job.clientName || "Unknown Client"
-                            )}</h4>
-                            <p class="text-sm text-gray-600">${escapeHtml(
-                              job.locationName || "Unknown Location"
-                            )}</p>
-                            <p class="text-sm text-gray-500">${serviceDate} at ${serviceTime}</p>
-                            ${
-                              job.adminNotes
-                                ? `<p class="text-sm text-blue-600 mt-1">Notes: ${escapeHtml(
-                                    job.adminNotes
-                                  )}</p>`
-                                : ""
-                            }
-                        </div>
-                        <div class="flex flex-col space-y-2 ml-4">
-                            <select onchange="updateJobStatus('${
-                              doc.id
-                            }', this.value)" class="text-xs p-1 border rounded">
-                                <option value="Scheduled" ${
-                                  job.status === "Scheduled" ? "selected" : ""
-                                }>Scheduled</option>
-                                <option value="In Progress" ${
-                                  job.status === "In Progress" ? "selected" : ""
-                                }>In Progress</option>
-                                <option value="Complete" ${
-                                  job.status === "Complete" ? "selected" : ""
-                                }>Complete</option>
-                            </select>
-                            <button onclick="approveJobPhotos('${
-                              doc.id
-                            }')" class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
-                                Approve Photos
-                            </button>
-                            <button onclick="editJobNotes('${
-                              doc.id
-                            }')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-                                Edit Notes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
+  <div class="border rounded-lg p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+       onclick="window.location.href='admin-service-history.html#${doc.id}'">
+    <div class="flex justify-between items-start">
+      <div class="flex-1">
+        <h4 class="font-medium">${escapeHtml(
+          job.clientName || "Unknown Client"
+        )}</h4>
+        <p class="text-sm text-gray-600">${escapeHtml(
+          job.locationName || "Unknown Location"
+        )}</p>
+        <p class="text-sm text-gray-500">${serviceDate} at ${serviceTime}</p>
+        ${
+          job.adminNotes
+            ? `<p class="text-sm text-blue-600 mt-1">Notes: ${escapeHtml(
+                job.adminNotes
+              )}</p>`
+            : ""
+        }
+      </div>
+    </div>
+  </div>
+`;
     });
 
     html += "</div>";
@@ -2498,7 +2415,9 @@ function attachInteractiveFeatureListeners() {
   const jobModal = document.getElementById("job-management-modal");
 
   if (closeJobModal && jobModal) {
+    console.log("DEBUG: Setting up job modal close listener");
     closeJobModal.addEventListener("click", () => {
+      console.log("DEBUG: Job modal close button clicked");
       jobModal.classList.add("hidden");
     });
 
@@ -2659,3 +2578,118 @@ window.openServiceAgreementModal = openServiceAgreementModal;
 window.populateQASClientDropdown = populateQASClientDropdown;
 window.populateQASLocationDropdown = populateQASLocationDropdown;
 window.populateQASLocationClientDropdown = populateQASLocationClientDropdown;
+window.triggerPayrollProcessing = triggerPayrollProcessing;
+window.loadPayrollStatus = loadPayrollStatus;
+
+// Global payroll status function
+async function loadPayrollStatus() {
+  if (!db) return;
+
+  try {
+    // Try to estimate payroll from completed services (fallback approach)
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Get completed services in the last 30 days to estimate pending payroll
+    const completedServicesSnapshot = await db
+      .collection("serviceHistory")
+      .where("status", "==", "Complete")
+      .where(
+        "serviceDate",
+        ">=",
+        firebase.firestore.Timestamp.fromDate(thirtyDaysAgo)
+      )
+      .get();
+
+    let estimatedPendingAmount = 0;
+    let completedJobs = 0;
+
+    completedServicesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      // Estimate $50 per completed service (adjust as needed)
+      estimatedPendingAmount += 50;
+      completedJobs++;
+    });
+
+    // Try to get actual payroll records, but handle permission errors
+    let actualPendingAmount = estimatedPendingAmount;
+    let processedCount = 0;
+    let statusMessage = `Estimated based on ${completedJobs} completed jobs`;
+
+    try {
+      const payrollSnapshot = await db
+        .collection("payrollRecords")
+        .where("status", "==", "Pending")
+        .get();
+
+      actualPendingAmount = 0;
+      payrollSnapshot.forEach((doc) => {
+        const data = doc.data();
+        actualPendingAmount += data.totalAmount || 0;
+      });
+
+      const processedSnapshot = await db
+        .collection("payrollRecords")
+        .where("status", "==", "Paid")
+        .get();
+
+      processedCount = processedSnapshot.size;
+      statusMessage = `${
+        payrollSnapshot.size
+      } pending records • Last updated: ${new Date().toLocaleTimeString()}`;
+    } catch (payrollError) {
+      // Silent handling - this is expected for users without payroll access
+      statusMessage = `Estimated: ${completedJobs} jobs completed • Limited access mode`;
+      pendingCount = 0;
+      processedCount = 0;
+    }
+
+    // Update the display
+    document.getElementById(
+      "pending-payroll-amount"
+    ).textContent = `$${actualPendingAmount.toFixed(2)}`;
+    document.getElementById("processed-payroll-count").textContent =
+      processedCount;
+    document.getElementById("payroll-status-message").textContent =
+      statusMessage;
+  } catch (error) {
+    console.error("Error loading payroll status:", error);
+    document.getElementById("payroll-status-message").textContent =
+      "Unable to load payroll status";
+    document.getElementById("pending-payroll-amount").textContent = "$0.00";
+    document.getElementById("processed-payroll-count").textContent = "0";
+  }
+}
+
+// Helper function for payroll processing
+async function triggerPayrollProcessing() {
+  try {
+    const user = firebase.auth().currentUser;
+    if (!user) {
+      alert("You must be logged in to process payroll.");
+      return;
+    }
+    const idToken = await user.getIdToken();
+    const response = await fetch(
+      "https://us-central1-cleveland-clean-portal.cloudfunctions.net/processCompletedJobsPayroll",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      }
+    );
+    const result = await response.json();
+    alert(result.message || "Payroll processing complete!");
+    // Refresh dashboard payroll status and payroll table
+    if (typeof loadPayrollStatus === "function") {
+      loadPayrollStatus();
+    }
+    if (typeof fetchAndDisplayPayrollRecords === "function") {
+      fetchAndDisplayPayrollRecords();
+    }
+  } catch (err) {
+    console.error("Payroll processing failed:", err);
+    alert("Error processing payroll: " + (err.message || err));
+  }
+}

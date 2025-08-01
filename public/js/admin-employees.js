@@ -293,17 +293,30 @@ document.addEventListener("DOMContentLoaded", function () {
   function setupEventListeners() {
     console.log("DEBUG AEMP: Setting up event listeners.");
 
+    // Hide the rate management section initially (no employee selected)
+    if (employeeRateManagementSection) {
+      employeeRateManagementSection.style.display = "none";
+    }
+
     if (showAddEmployeeFormBtn) {
       showAddEmployeeFormBtn.addEventListener("click", () => {
         console.log("DEBUG AEMP: 'Add New Employee' button clicked.");
         if (addEmployeeForm) addEmployeeForm.reset();
         showGeneralMessage(addEmployeeMessageEl, "", "info");
+        // Hide the rate management section when adding a new employee
+        if (employeeRateManagementSection) {
+          employeeRateManagementSection.style.display = "none";
+        }
         showPageSection(addEmployeeFormSection);
       });
     }
 
     if (cancelAddEmployeeBtn) {
       cancelAddEmployeeBtn.addEventListener("click", () => {
+        // Hide the rate management section when canceling add employee
+        if (employeeRateManagementSection) {
+          employeeRateManagementSection.style.display = "none";
+        }
         showPageSection(employeeMainView);
       });
     }
@@ -314,6 +327,9 @@ document.addEventListener("DOMContentLoaded", function () {
         currentEditingEmployeeName = null;
         if (addEditEmployeeRateFormSection)
           addEditEmployeeRateFormSection.style.display = "none"; // Hide rate form
+        // Hide the rate management section when no employee is selected
+        if (employeeRateManagementSection)
+          employeeRateManagementSection.style.display = "none";
         showPageSection(employeeMainView);
       });
     }
@@ -672,6 +688,12 @@ document.addEventListener("DOMContentLoaded", function () {
     // Role management elements removed - now handled in main form
 
     currentEditingEmployeeId = employeeId;
+
+    // Show the rate management section when an employee is selected
+    if (employeeRateManagementSection) {
+      employeeRateManagementSection.style.display = "block";
+    }
+
     // This log was already in your "original" and is good:
     console.log(
       `AEMP DEBUG: editEmployeeAuthUidInput value AT START of handleEditEmployeeClick: '${
