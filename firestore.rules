@@ -80,12 +80,19 @@ service cloud.firestore {
                request.resource.data.updatedAt is timestamp;
       }
 
+      function isEmployeeEmailMatch() {
+        return isLoggedIn() && request.auth.token.email == resource.data.email;
+      }
+
       // Allow reading for admins, owners, or the employee themselves
       allow read: if hasClaim('admin') || isOwner() || 
-                     (hasClaim('employee') && isProfileOwner(employeeDocId));
+                     (hasClaim('employee') && isProfileOwner(employeeDocId)) ||
+                     (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isProfileOwner(employeeDocId)) ||
+                     isEmployeeEmailMatch();
       allow create: if hasClaim('admin') || isOwner();
       allow update: if hasClaim('admin') || isOwner() ||
-                       (hasClaim('employee') && isProfileOwner(employeeDocId) && employeeCanUpdateProfileFields());
+                       (hasClaim('employee') && isProfileOwner(employeeDocId) && employeeCanUpdateProfileFields()) ||
+                       (isLoggedIn() && hasRoleInFirestore(request.auth.uid, 'employee') && isProfileOwner(employeeDocId) && employeeCanUpdateProfileFields());
       allow delete: if hasClaim('admin') || isOwner();
     }
 
